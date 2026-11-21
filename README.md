@@ -18,7 +18,7 @@ Alle Tastenkürzel zeigt die Taste **?** im Editor.
 
 ## Starten
 
-**Am einfachsten:** die GitHub-Pages-Adresse dieses Projekts im Browser öffnen – fertig.
+**Am einfachsten:** **[lennartschneider.github.io/podcast-editor](https://lennartschneider.github.io/podcast-editor/)** im Browser öffnen – fertig.
 
 **Lokal auf dem eigenen Rechner** (z. B. ohne Internet):
 

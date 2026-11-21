@@ -1379,8 +1379,12 @@ function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage
   S.clip.forEach((chs,i)=>{let t=ts[i];if(!t){t=newTrack({name:'Eingefügt',off:at,ch:chs.slice(),sel:true});S.tracks.push(t);ts.push(t);struct=true}else insertAt(t,at,chs)});
   if(S.sync)for(const t of S.tracks)if(!ts.includes(t)&&!t.lock)insertSilence(t,at,len);
   setSel(at,at+len/SR);changed(struct);if(monoW)toast('Eingefügt · ⚠ Stereo wurde in Mono umgewandelt (Zielspur ist Mono)',5000)}
-function opSilence(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');stopAll();pushUndo('Stille');logOp(ts,{k:'sil',a:S.sel.a,b:S.sel.b});
-  for(const t of ts){const[i0,i1]=trackRange(t);if(i1>i0)t.ch=t.ch.map(s=>s.splice(i0,i1,Seq.zeros(i1-i0)))}changed()}
+/* Stille: Hüllkurve in der Markierung auf stumm setzen (zerstörungsfrei, kurze Rampen gegen Knacken) – rückgängig per Hüllkurve oder Strg+Z */
+function envSilenceRange(t,a,b){const len=tLen(t)/SR;a=clamp(a,0,len);b=clamp(b,0,len);if(b-a<.002)return false;const r=Math.min(.005,(b-a)/4),va=envDbAt(t,a),vb=envDbAt(t,b),out=(t.env||[]).filter(q=>q.t<a-1e-6||q.t>b+1e-6);
+  out.push({t:a,db:Math.round(va*10)/10},{t:a+r,db:ENV_MIN},{t:b-r,db:ENV_MIN},{t:b,db:Math.round(vb*10)/10});out.sort((x,y)=>x.t-y.t);t.env=out;logEnv(t);return true}
+function opSilence(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');stopAll();pushUndo('Stille');let n=0;
+  for(const t of ts)if(envSilenceRange(t,S.sel.a-t.off,S.sel.b-t.off))n++;if(!n){S.undo.pop();return toast('Die Markierung liegt außerhalb des Audios')}
+  changed();toast('Markierung stumm (Hüllkurve) – mit „Hüllkurve zurücksetzen“ wieder hörbar',3500)}
 function opTrim(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst den Bereich auswählen, der bleiben soll');stopAll();pushUndo('Zuschneiden');logOp(ts,{k:'trim',a:S.sel.a,b:S.sel.b});
   for(const t of ts){const[i0,i1]=trackRange(t),off0=t.off;t.ch=t.ch.map(s=>s.sub(i0,i1));t.off+=i0/SR;remapCuts(t,off0,x=>x)}changed()}
 function opDup(){if(!editable())return;const ts=targets();if(!ts)return;stopAll();pushUndo('Duplizieren');
@@ -2156,7 +2160,7 @@ document.addEventListener('keydown',e=>{const tg=e.target instanceof Element?e.t
 document.addEventListener('mouseup',e=>{const b=e.target.closest?.('button');if(b)setTimeout(()=>b.blur(),0)});
 /* Maustasten: Daumen vorne = Löschen · Daumen hinten = Auswahl stumm (Stille) · Mausrad-Klick = Play/Pause */
 function delKey(){if(S.envMode&&envSelN()&&envDelSel())return;if(S.tsel&&(S.tselT||0)>(S.selT||0)&&S[S.tsel.key].some(x=>x.id===S.tsel.id))delText(S.tsel.key,S.tsel.id);else opDelete()}
-function muteSel(){if(hasSel()){opSilence();toast('Auswahl stumm geschaltet (Stille)')}else{let ts=S.tracks.filter(t=>t.sel);if(!ts.length&&byId(S.focus))ts=[byId(S.focus)];if(!ts.length)return toast('Nichts ausgewählt');toggleMS('mute');toast(ts[0].mute?'Spur stumm':'Spur wieder hörbar')}}
+function muteSel(){if(hasSel()){opSilence()}else{let ts=S.tracks.filter(t=>t.sel);if(!ts.length&&byId(S.focus))ts=[byId(S.focus)];if(!ts.length)return toast('Nichts ausgewählt');toggleMS('mute');toast(ts[0].mute?'Spur stumm':'Spur wieder hörbar')}}
 function mouseBlocked(e){return $('#modal').classList.contains('on')||!!ED||!!(e&&e.target.closest?.('input,textarea,select'))}
 window.addEventListener('mousedown',e=>{if(e.button!==1&&e.button!==3&&e.button!==4)return;e.preventDefault();hideCtx();if(mouseBlocked(e))return;
   if(e.button===4)delKey();else if(e.button===3)muteSel();else if(!e.target.closest?.('#tracks .tw'))togglePause()},true);

@@ -208,6 +208,9 @@ body.busy #busy{display:flex}
 #busy .bl{font-weight:600;color:#e7e7ea;text-align:center}
 #busy .bar2{width:220px;height:6px;border-radius:4px;background:#26262a;overflow:hidden}
 #busy .bar2 b{display:block;height:100%;width:0;background:#e7e7ea;transition:width .15s}
+#busy .bx{position:relative}
+#busy .bxc{display:none;position:absolute;top:8px;right:8px;width:24px;height:24px;padding:0;border-radius:50%;background:transparent;color:#8b8b93;font-size:17px;line-height:22px;cursor:pointer}
+#busy .bxc:hover{background:#26262a;color:#e7e7ea}body.busy-cancel #busy .bxc{display:block}
 #busy .pc{font-size:11.5px;color:#8b8b93;font-variant-numeric:tabular-nums}
 body.busy #foot #status{color:#e7e7ea}
 #modal .box.wide{width:min(820px,94vw)}
@@ -292,7 +295,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
       </div>
       <div id="hbar"><div id="hthumb"></div></div>
       <div id="phead"></div>
-      <div id="busy"><div class="bx"><div class="spin"></div><div class="bl">Bitte warten …</div><div class="bar2"><b></b></div><div class="pc">0 %</div></div></div>
+      <div id="busy"><div class="bx"><button class="bxc" title="Abbrechen (Esc) – es bleibt alles wie vorher">×</button><div class="spin"></div><div class="bl">Bitte warten …</div><div class="bar2"><b></b></div><div class="pc">0 %</div></div></div>
       <div id="cap"></div>
       <div id="tsearch"><span data-i="search"></span><input type="text" placeholder="Suchen …" spellcheck="false"><span class="cnt"></span><button class="pv" title="Vorheriger Treffer (Shift+Enter)">‹</button><button class="nx" title="Nächster Treffer (Enter)">›</button><button class="cl" title="Suche schließen (Esc)"></button></div>
       <div id="mvIns"><span></span></div><div id="mvBox"></div><div id="snapLn"></div>
@@ -354,7 +357,10 @@ const db2lin=d=>Math.pow(10,d/20), lin2db=v=>v>1e-12?20*Math.log10(v):-240;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nf=(v,d=1)=>Number(v).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtDb=v=>v<=-200?'−∞':(v>0?'+':'')+nf(v,1);
-const yieldUI=()=>new Promise(r=>setTimeout(r,0));
+/* Abbrechen langer Berechnungen: Klick auf × setzt CANCEL.on – jede Rechenpause (yieldUI) bricht dann mit Cancelled ab */
+class Cancelled extends Error{constructor(){super('Abgebrochen');this.cancelled=true}}
+const CANCEL={on:false,workers:new Set()};
+const yieldUI=()=>new Promise((r,j)=>setTimeout(()=>CANCEL.on?j(new Cancelled()):r(),0));
 function fmtClock(s){s=Math.max(0,Math.round(s*1000)/1000);const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s-Math.floor(s/60)*60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+x.toFixed(3).padStart(6,'0')}
 function fmtT(s){s=Math.max(0,Math.round(s*1000)/1000);const m=Math.floor(s/60),x=s-m*60,h=Math.floor(m/60);return (h?h+':'+String(m%60).padStart(2,'0'):m)+':'+x.toFixed(3).padStart(6,'0')}
 function fmtShort(s){s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s/60)%60,x=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')}
@@ -811,8 +817,9 @@ function nrProcess(x,pow,sr,red,sens,smooth,residue,prog){const N=2048,H=512,B=N
 const WORKER_SRC=makeFFT.toString()+'\n'+nrProcess.toString()+'\nonmessage=e=>{const d=e.data;const y=nrProcess(d.x,d.pow,d.sr,d.red,d.sens,d.smooth,d.res,p=>postMessage({p}));postMessage({y},[y.buffer])}';
 let workerURL;
 function nrRun(x,pow,p,onp){const msg={x:x.slice(),pow,sr:SR,red:p.red,sens:p.sens,smooth:p.smooth,res:!!p.res};
-  return new Promise((res,rej)=>{let w;try{workerURL=workerURL||URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'}));w=new Worker(workerURL)}catch(e){yieldUI().then(()=>res(nrProcess(msg.x,pow,SR,msg.red,msg.sens,msg.smooth,msg.res,null)));return}
-    w.onmessage=e=>{if(e.data.p!=null)onp&&onp(e.data.p);else{res(e.data.y);w.terminate()}};w.onerror=e=>{w.terminate();rej(new Error(e.message||'Worker-Fehler'))};w.postMessage(msg,[msg.x.buffer])})}
+  return new Promise((res,rej)=>{let w;if(CANCEL.on)return rej(new Cancelled());try{workerURL=workerURL||URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'}));w=new Worker(workerURL)}catch(e){yieldUI().then(()=>res(nrProcess(msg.x,pow,SR,msg.red,msg.sens,msg.smooth,msg.res,null)),rej);return}
+    const done=()=>{w.terminate();CANCEL.workers.delete(w)};w.__rej=rej;CANCEL.workers.add(w);/* bei Abbruch sofort beenden */
+    w.onmessage=e=>{if(e.data.p!=null)onp&&onp(e.data.p);else{done();res(e.data.y)}};w.onerror=e=>{done();rej(new Error(e.message||'Worker-Fehler'))};w.postMessage(msg,[msg.x.buffer])})}
 let FFT2048;const hann=N=>{const w=new Float32Array(N);for(let i=0;i<N;i++)w[i]=.5-.5*Math.cos(2*Math.PI*i/N);return w};let HANN2048;
 function specAvg(chs,starts){const N=2048,B=N/2+1;FFT2048=FFT2048||makeFFT(N);HANN2048=HANN2048||hann(N);const acc=new Float64Array(B),r=new Float32Array(N),q=new Float32Array(N);let cnt=0;
   for(const a0 of chs)for(const s of starts){const isS=a0 instanceof Seq,a=isS?a0.slice(s,s+N):a0,o=isS?0:s;for(let i=0;i<N;i++){const k=o+i;r[i]=(k>=0&&k<a.length)?a[k]*HANN2048[i]:0;q[i]=0}FFT2048.fwd(r,q);for(let k=0;k<B;k++)acc[k]+=r[k]*r[k]+q[k]*q[k];cnt++}
@@ -1121,18 +1128,18 @@ let infoT;function updFxInfo(){clearTimeout(infoT);infoT=setTimeout(()=>{const f
 function fxRange(t,fx,p){const n=tLen(t);if(fx.id==='fin'&&!hasSel())return[0,Math.min(n,Math.round(p.dur*SR))];if(fx.id==='fout'&&!hasSel())return[Math.max(0,n-Math.round(p.dur*SR)),n];return trackRange(t)}
 async function applyFx(id){const fx=FXM[id];if(!fx||S.busy||R.on)return;const ts=targets();if(!ts)return;const p=fxParams(fx);stopAll();
   if(fx.lenChange)return truncSync(ts,p);
-  setBusy(true,fx.name+(ts.length>1?` · ${ts.length} Spuren`:'')+' …');await paintPause();let pushed=false;
+  setBusy(true,fx.name+(ts.length>1?` · ${ts.length} Spuren`:'')+' …',true);await paintPause();let pushed=false;
   try{const c=fx.prepare?fx.prepare(ts,p):{};pushUndo(fx.name);pushed=true;let any=false,maxNew=0;
     for(let i=0;i<ts.length;i++){const t=ts[i],[i0,i1]=fxRange(t,fx,p);if(i1-i0<2)continue;if(ts.length>1)setBusyLabel(`${fx.name} · Spur ${i+1} von ${ts.length} …`);logFx(t,fx,p,i0,i1);
       const res=await fxApply(fx,p,c,t,i0,i1,f=>progress((i+clamp(f,0,1))/ts.length));any=true;if(res!=='env')maxNew=Math.max(maxNew,res);progress((i+1)/ts.length);await yieldUI()}
     if(!any){S.undo.pop();toast('Bereich ist leer');return}
     if(fx.lenChange&&hasSel())S.sel.b=S.sel.a+maxNew/SR;
     S.lastFx=id;changed(true);toast(fx.name+' angewendet'+(c.note?' · '+c.note:''))}
-  catch(e){console.error(e);if(pushed){const u=S.undo.pop();restoreSnap(u)}toast('Fehler: '+e.message,4500)}
+  catch(e){if(pushed){const u=S.undo.pop();restoreSnap(u)}if(e.cancelled)toast(fx.name+' abgebrochen – nichts geändert');else{console.error(e);toast('Fehler: '+e.message,4500)}}
   finally{setBusy(false)}}
 async function truncSync(ts,p){/* gemeinsame Pausen aller ausgewählten Spuren finden und in ALLEN Spuren schneiden */
   const A=hasSel()?S.sel.a:Math.min(...ts.map(t=>t.off)),B=hasSel()?S.sel.b:Math.max(...ts.map(tEnd)),n=Math.round((B-A)*SR);if(n<2)return;
-  setBusy(true,'Suche Pausen …');await paintPause();let cuts;try{cuts=await silenceCutsAsync(ts.flatMap(t=>t.ch.map(s=>({s,st:Math.round((t.off-A)*SR)}))),n,p)}finally{setBusy(false)}
+  setBusy(true,'Suche Pausen …',true);await paintPause();let cuts;try{cuts=await silenceCutsAsync(ts.flatMap(t=>t.ch.map(s=>({s,st:Math.round((t.off-A)*SR)}))),n,p)}catch(e){if(e.cancelled){setBusy(false);return toast('Stille kürzen abgebrochen – nichts geändert')}throw e}finally{setBusy(false)}
   if(!cuts.length)return toast('Keine passenden Pausen gefunden');
   pushUndo('Stille kürzen');logOp(syncSet(ts),{k:'trunc',p:{...p},r:hasSel()?[S.sel.a,S.sel.b]:null});const sum=cuts.reduce((s,[a,b])=>s+b-a,0);
   for(const t of syncSet(ts))for(let k=cuts.length-1;k>=0;k--)removeTime(t,A+cuts[k][0]/SR,A+cuts[k][1]/SR);
@@ -1140,7 +1147,7 @@ async function truncSync(ts,p){/* gemeinsame Pausen aller ausgewählten Spuren f
   if(hasSel())S.sel.b-=sum/SR;S.lastFx='trunc';changed(true);toast(`${cuts.length} Pausen gekürzt · ${nf(sum/SR,1)} s gespart${S.sync?' (alle Spuren synchron)':''}`)}
 async function previewFx(id){const fx=FXM[id];if(S.busy||R.on)return;const ts=targets();if(!ts)return;const t=ts[0],p=fxParams(fx);let[i0,i1]=fxRange(t,fx,p);
   if(i1-i0<2)return toast('Bereich ist leer');const M=Math.round(8*SR);if(i1-i0>M){if(fx.id==='fout')i0=i1-M;else i1=i0+M}
-  setBusy(true,'Vorschau: '+fx.name+' …');await paintPause();try{const c=fx.prepare?fx.prepare([t],p):{};const out=await procRange(fx,p,c,t,i0,i1,progress);setBusy(false);playPreview(out,t)}catch(e){setBusy(false);toast('Fehler: '+e.message)}}
+  setBusy(true,'Vorschau: '+fx.name+' …',true);await paintPause();try{const c=fx.prepare?fx.prepare([t],p):{};const out=await procRange(fx,p,c,t,i0,i1,progress);setBusy(false);playPreview(out,t)}catch(e){setBusy(false);toast(e.cancelled?'Vorschau abgebrochen':'Fehler: '+e.message)}}
 const paintPause=()=>new Promise(r=>setTimeout(r,40));
 /* Effekt auf [i0,i1) einer Spur: mit Vorlauf/Nachlauf rechnen (Filter/Regelung „schwingen ein“) und an den Rändern weich überblenden */
 async function procRange(fx,p,c,t,i0,i1,onp){const n=tLen(t),H=fx.handle?Math.round(fx.handle*SR):0,h0=Math.min(H,i0),h1=Math.min(H,n-i1);
@@ -1621,12 +1628,12 @@ async function replayStep(t,e,onp){const A=x=>t.off+x,n=tLen(t),idx=(a,b)=>[clam
     case'env':t.env=e.env.filter(q=>q.t<=n/SR+.001).map(q=>({...q}));return true;
     case'envapply':if(!t.env||!t.env.length)return false;t.ch=t.ch.map(s=>mapSeq(s,(z,g0)=>{for(let i=0;i<z.length;i+=64){const g=envAt(t,(g0+i)/SR),en=Math.min(z.length,i+64);for(let k=i;k<en;k++)z[k]*=g}}));t.env=[];return true}
   return false}
-async function applyRecipe(ts,steps,name){if(!editable()||!steps.length)return;stopAll();setBusy(true,'Rezept „'+name+'“ …');await paintPause();pushUndo('Rezept: '+name);let done=0,skip=0;
+async function applyRecipe(ts,steps,name){if(!editable()||!steps.length)return;stopAll();setBusy(true,'Rezept „'+name+'“ …',true);await paintPause();pushUndo('Rezept: '+name);let done=0,skip=0;
   try{for(let i=0;i<steps.length;i++){const e=steps[i];setBusyLabel(`${name} · Schritt ${i+1} von ${steps.length}: ${stepTitle(e)}`);
       for(let j=0;j<ts.length;j++){const t=ts[j],ok=await replayStep(t,e,f=>progress((i+(j+clamp(f,0,1))/ts.length)/steps.length));
         if(ok){done++;t.log=(t.log||[]).concat([{...e,at:Date.now()}])}else skip++;await yieldUI()}}
     changed(true);toast(`Rezept „${name}“ angewendet · ${done} ${done===1?'Schritt':'Schritte'}${skip?` · ${skip} übersprungen (passte nicht)`:''}`,4000)}
-  catch(err){console.error(err);const u=S.undo.pop();if(u)restoreSnap(u);toast('Rezept abgebrochen: '+err.message,5000)}
+  catch(err){const u=S.undo.pop();if(u)restoreSnap(u);if(err.cancelled)toast('Rezept abgebrochen – nichts geändert');else{console.error(err);toast('Rezept abgebrochen: '+err.message,5000)}}
   finally{setBusy(false)}}
 /* ---- Rezepte: speichern, gespeicherte im Browser, Dateien ---- */
 const RZ_KEY='recipes',rzList=()=>lsGet(RZ_KEY,[]);
@@ -1945,7 +1952,11 @@ async function newProject(){if(!S.tracks.length)return;if(!await confirmBox('Neu
 
 /* ============================== UI-Allgemein ============================== */
 function setStatus(s){$('#status').textContent=s}
-function setBusy(on,label){S.busy=on;document.body.classList.toggle('busy',on);if(on){setBusyLabel(label||'Bitte warten …');progress(0)}else setStatus(R.on?'● Aufnahme läuft':'Bereit')}
+function setBusy(on,label,cancelable){S.busy=on;document.body.classList.toggle('busy',on);document.body.classList.toggle('busy-cancel',!!(on&&cancelable));CANCEL.on=false;
+  if(on){setBusyLabel(label||'Bitte warten …');progress(0)}else setStatus(R.on?'● Aufnahme läuft':'Bereit')}
+function cancelBusy(){if(!S.busy||!document.body.classList.contains('busy-cancel')||CANCEL.on)return;CANCEL.on=true;setBusyLabel('Wird abgebrochen …');
+  for(const w of CANCEL.workers){w.terminate();w.__rej&&w.__rej(new Cancelled())}CANCEL.workers.clear()}
+$('#busy .bxc').onclick=cancelBusy;document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.busy){e.preventDefault();e.stopPropagation();cancelBusy()}},true);
 function setBusyLabel(s){setStatus(s);$('#busy .bl').textContent=s}
 function progress(f){const v=clamp(f,0,1)*100;$('#prog b').style.width=v+'%';$('#busy .bar2 b').style.width=v+'%';$('#busy .pc').textContent=Math.round(v)+' %'}
 function modal(html,wide){const m=$('#modal');m.innerHTML=`<div class="box${wide?' wide':''}">${html}</div>`;m.classList.add('on')}

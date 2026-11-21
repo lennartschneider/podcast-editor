@@ -19,6 +19,7 @@
 #bEnv.on{background:#3a2a17;color:#ffb86b}
 #bAuto{color:#5d5d65}
 #bAuto.on{color:#4ade80}
+#bAuto.nodir{color:#ff5d5d;background:#2a1717}
 #bAuto.warn{color:#f5b942;background:#2a2412}
 #bAuto.run svg{animation:spin 1s linear infinite}
 #pname{font-weight:600;color:#cfcfd6;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;margin:0 6px 0 4px}
@@ -156,7 +157,9 @@ body.sideoff #side{display:none}
 .sec h4 .r{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:400;color:#4d4d55}
 #logList{display:flex;flex-direction:column;gap:1px;max-height:220px;overflow:auto;margin:6px 0 2px}
 #logList .lg{display:flex;gap:8px;align-items:baseline;font-size:12px;color:#b9b9c0;padding:3px 6px;border-radius:6px}
-#logList .lg:hover{background:#1f1f22}#logList .lg .n{color:#5d5d65;font-variant-numeric:tabular-nums;min-width:16px;text-align:right}
+#logList .lg{cursor:pointer}#logList .lg.nj{cursor:default}#logList .lg:hover{background:#1f1f22}
+#logList .lg .rm{opacity:0;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#8b8b93;font-size:14px;margin-left:2px;flex:none}
+#logList .lg:hover .rm{opacity:1}#logList .lg .rm:hover{background:#2a1717;color:#ff7b7b}#logList .lg .n{color:#5d5d65;font-variant-numeric:tabular-nums;min-width:16px;text-align:right}
 #logList .lg .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#logList .lg.tb .tx{color:#8b8b93}#logList .lg .tm{color:#5d5d65;font-size:11px}
 #rzSteps{display:flex;flex-direction:column;gap:2px;max-height:46vh;overflow:auto;margin:8px 0}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
@@ -379,7 +382,7 @@ const I={
  search:SV('<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>'),
  side:SV('<rect x="2" y="2.5" width="12" height="11" rx="1.8"/><path d="M10 2.5v11"/>'),
  chev:'<svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>',
- envi:SV('<path d="M1.5 11.5 5 5l4 4 5.5-6"/><circle cx="5" cy="5" r="1.3" fill="currentColor"/><circle cx="9" cy="9" r="1.3" fill="currentColor"/>'),
+ envi:SV('<path d="M1.5 11.5C4.5 11.5 5 4.5 8 4.5s3.5 7 6.5 7"/><circle cx="8" cy="4.5" r="1.8" fill="currentColor" stroke="none"/>')/* weiche Kurve mit Griff */,
  play:SV('<path d="M5 3.2v9.6c0 .4.4.6.7.4l7.2-4.8c.3-.2.3-.6 0-.8L5.7 2.8c-.3-.2-.7 0-.7.4z" fill="currentColor"/>'),
  pause:SV('<rect x="4" y="3" width="2.6" height="10" rx=".8" fill="currentColor" stroke="none"/><rect x="9.4" y="3" width="2.6" height="10" rx=".8" fill="currentColor" stroke="none"/>'),
  stop:SV('<rect x="3.5" y="3.5" width="9" height="9" rx="1.6" fill="currentColor" stroke="none"/>'),
@@ -508,10 +511,11 @@ function insertAt(t,at,chs,raw){const n=tLen(t),off0=t.off,L=chs[0].length/SR;if
 /* ============================== Undo ============================== */
 function snap(){const o={tracks:S.tracks.map(t=>({...t,ch:t.ch.slice(),cuts:(t.cuts||[]).slice(),env:(t.env||[]).map(p=>({...p})),log:(t.log||[]).slice(),clr:(t.clr||[]).map(q=>({...q}))})),sel:{...S.sel}};for(const k of TKEYS)o[k]=S[k].map(x=>({...x}));return o}
 const UNDO_MAX=20;
-function pushUndo(label){S.undo.push({...snap(),label});if(S.undo.length>UNDO_MAX)S.undo.shift();S.redo=[]}
+let UNDO_ID=0;
+function pushUndo(label){const id=++UNDO_ID;S.lastUndoId=id;S.undo.push({...snap(),label,id});if(S.undo.length>UNDO_MAX)S.undo.shift();S.redo=[]}
 function restoreSnap(sn){const cur=new Map(S.tracks.map(t=>[t.id,t]));S.tracks=sn.tracks.map(t=>{const r={...t,ch:t.ch.slice(),cuts:(t.cuts||[]).slice(),env:(t.env||[]).map(p=>({...p})),log:(t.log||[]).slice(),clr:(t.clr||[]).map(q=>({...q}))},c=cur.get(t.id);if(c){r.mute=c.mute;r.solo=c.solo;r.lock=c.lock;r.vol=c.vol;r.pan=c.pan;r.h=c.h;r.name=c.name}return r});S.sel={...sn.sel};for(const k of TKEYS)if(sn[k])S[k]=sn[k].map(x=>({...x}));if(!byId(S.focus))S.focus=null;changed(true)}
-function undo(){if(S.busy||R.on)return;if(!S.undo.length)return toast('Nichts rückgängig zu machen');stopAll();const u=S.undo.pop();S.redo.push({...snap(),label:u.label});if(S.redo.length>UNDO_MAX)S.redo.shift();restoreSnap(u);toast('Rückgängig: '+u.label+(S.undo.length?` · noch ${S.undo.length} Schritte`:''))}
-function redo(){if(S.busy||R.on)return;if(!S.redo.length)return toast('Nichts zu wiederholen');stopAll();const u=S.redo.pop();S.undo.push({...snap(),label:u.label});if(S.undo.length>UNDO_MAX)S.undo.shift();restoreSnap(u);toast('Wiederholt: '+u.label+(S.redo.length?` · noch ${S.redo.length}`:''))}
+function undo(){if(S.busy||R.on)return;if(!S.undo.length)return toast('Nichts rückgängig zu machen');stopAll();const u=S.undo.pop();S.redo.push({...snap(),label:u.label,id:u.id});if(S.redo.length>UNDO_MAX)S.redo.shift();restoreSnap(u);toast('Rückgängig: '+u.label+(S.undo.length?` · noch ${S.undo.length} Schritte`:''))}
+function redo(){if(S.busy||R.on)return;if(!S.redo.length)return toast('Nichts zu wiederholen');stopAll();const u=S.redo.pop();S.undo.push({...snap(),label:u.label,id:u.id});if(S.undo.length>UNDO_MAX)S.undo.shift();restoreSnap(u);toast('Wiederholt: '+u.label+(S.redo.length?` · noch ${S.redo.length}`:''))}
 function changed(struct){if(struct)renderTracks();else updRows();renderTextUI();clampView();invalidate();updUI();scheduleSave();bkHint()}
 /* einmal pro Sitzung erinnern, wenn die Sicherung an ist, aber noch kein Ordner gewählt wurde */
 let bkHinted=false;function bkHint(){try{if(bkHinted||!S.tracks.some(t=>tLen(t))||!BK.on||bkDir||!window.showDirectoryPicker)return}catch{return}bkHinted=true;
@@ -962,7 +966,7 @@ const FX=[
 {id:'gate',name:'Rauschsperre',icon:'gate',
  desc:'Schaltet leise Stellen zwischen dem Sprechen stumm – Atmen, Rauschen, leise Geräusche. Während gesprochen wird, bleibt der Ton unverändert.',
  params:[{k:'auto',l:'Schwelle automatisch',type:'chk',def:true},{k:'thr',l:'Schwelle',min:-80,max:-20,step:1,def:-50,u:'dB',show:p=>!p.auto},
-  {k:'red',l:'Absenkung',min:6,max:60,step:1,def:60,fmt:v=>v>=60?'stumm':'−'+Math.round(v)+' dB'},{k:'hold',l:'Halten',min:50,max:800,step:10,def:200,u:'ms'},{k:'rel',l:'Ausblenden',min:20,max:500,step:10,def:120,u:'ms'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
+  {k:'red',l:'Absenkung',min:6,max:60,step:1,def:60,fmt:v=>v>=60?'stumm':'−'+Math.round(v)+' dB'},{k:'hold',l:'Halten',min:50,max:800,step:10,def:250,u:'ms'},{k:'rel',l:'Ausblenden',min:20,max:500,step:10,def:150,u:'ms'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
  handle:.3,
  info(ts){const t=ts[0],st=memoAsync(t,'gst',0,tLen(t),()=>trackStats(t.ch));if(!st)return `<span class="hint">Pegel werden gemessen …</span><br>${scopeTxt(ts)}`;
    const P=FXP.gate;return gateInfo(st,P.auto&&st.ok?st.thr:P.thr,P.auto)+'<br>'+scopeTxt(ts)},
@@ -974,7 +978,7 @@ const FX=[
 {id:'xgate',name:'Atmer & Übersprechen',icon:'xgate',
  desc:'Für Gespräche mit einer Spur pro Person: Während die andere Person spricht, wird diese Spur leiser – Atmer, Räuspern und die mitgehörte Stimme verschwinden. Sprechen beide, bleibt alles hörbar.',
  params:[{k:'margin',l:'Abstand',min:6,max:30,step:1,def:15,u:'dB'},{k:'quiet',l:'Auch leise Stellen ohne Gegenüber absenken',type:'chk',def:true},
-  {k:'red',l:'Absenkung',min:6,max:60,step:1,def:60,fmt:v=>v>=60?'stumm':'−'+Math.round(v)+' dB'},{k:'hold',l:'Halten',min:50,max:800,step:10,def:250,u:'ms'},{k:'rel',l:'Ausblenden',min:20,max:500,step:10,def:150,u:'ms'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
+  {k:'red',l:'Absenkung',min:6,max:60,step:1,def:60,fmt:v=>v>=60?'stumm':'−'+Math.round(v)+' dB'},{k:'hold',l:'Halten',min:50,max:800,step:10,def:300,u:'ms'},{k:'rel',l:'Ausblenden',min:20,max:500,step:10,def:180,u:'ms'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
  handle:0,
  info(ts){const others=S.tracks.filter(u=>tLen(u)&&!ts.includes(u)),all=S.tracks.filter(u=>tLen(u));
    if(all.length<2)return '<span class="warn">Braucht mindestens zwei Spuren mit Ton – z. B. deine Spur und die deines Gasts.</span>';
@@ -1050,16 +1054,16 @@ const TIPS={
  'gate.auto':['Der Editor misst selbst, wie laut Hintergrund und Sprache sind, und legt die Schwelle passend dazwischen.','An.'],
  'gate.thr':['Alles, was leiser ist, wird abgesenkt. Zu hoch: leise Wortenden werden abgeschnitten. Zu niedrig: Atmer bleiben drin.','Etwa 25–35 dB unter der Sprache, meist zwischen −55 und −40 dB.'],
  'gate.red':['Wie stark leise Stellen abgesenkt werden. Ganz stumm kann „tot“ wirken, ein kleiner Rest klingt natürlicher.','Stumm (ganz rechts) für saubere Pausen, 15–25 dB, wenn es zu abgehackt wirkt.'],
- 'gate.hold':['Wie lange nach dem Sprechen noch alles hörbar bleibt – damit Wortenden und kurze Pausen im Satz nicht zerhackt werden.','150–300 ms.'],
+ 'gate.hold':['Wie lange nach dem Sprechen noch alles hörbar bleibt – damit Wortenden und kurze Pausen im Satz nicht zerhackt werden.','200–350 ms.'],
  'gate.env':['Das Audio selbst bleibt unverändert: Die Rauschsperre setzt Punkte auf der Hüllkurve. Ist eine Stelle zu viel abgesenkt, ziehst du die Punkte im Hüllkurven-Modus (H) einfach hoch oder löschst sie. „Hüllkurve übernehmen“ schreibt es später endgültig ins Audio – nötig ist das nicht, Wiedergabe und Export beachten die Hüllkurve.','An – dann kannst du jede Stelle nachträglich korrigieren.'],
- 'gate.rel':['Wie sanft danach ausgeblendet wird. Kurz = abrupt, lang = weich.','100–250 ms.'],
+ 'gate.rel':['Wie sanft danach ausgeblendet wird. Kurz = abrupt, lang = weich.','120–250 ms.'],
  xgate:['Für Gespräche, bei denen jede Person eine eigene Spur hat: Während die andere Person spricht, wird diese Spur leiser. So verschwinden deine Atmer, dein Räuspern und die Stimme deines Gasts, die dein Mikrofon mit aufnimmt. Sprecht ihr gleichzeitig, bleibt alles hörbar.','Beide Sprecherspuren auswählen und mit Standardwerten anwenden.'],
  'xgate.margin':['Wie viel leiser diese Spur als die andere sein muss, damit sie abgesenkt wird. Höher = vorsichtiger: Lacher und leise Einwürfe wie „mhm“ bleiben eher drin.','12–18 dB, Standard 15 dB.'],
  'xgate.quiet':['Senkt zusätzlich leise Stellen ab, wenn gerade niemand spricht – wie die Rauschsperre.','An.'],
  'xgate.red':['Wie stark diese Spur abgesenkt wird, während die andere spricht.','Stumm für saubere Spuren, 15–25 dB, wenn es zu abgehackt wirkt.'],
- 'xgate.hold':['Wie lange die Spur nach deinem letzten Wort noch offen bleibt.','200–300 ms.'],
+ 'xgate.hold':['Wie lange die Spur nach deinem letzten Wort noch offen bleibt.','250–400 ms.'],
  'xgate.env':['Das Audio selbst bleibt unverändert: Abgesenkte Stellen werden als Punkte auf der Hüllkurve gesetzt. Hat es ein „mhm“ oder ein Wortende erwischt, ziehst du die Punkte im Hüllkurven-Modus (H) hoch oder löschst sie – oder markierst die Stelle und klickst „Hüllkurve zurücksetzen“.','An.'],
- 'xgate.rel':['Wie sanft danach ausgeblendet wird.','100–250 ms.'],
+ 'xgate.rel':['Wie sanft danach ausgeblendet wird.','150–300 ms.'],
  norm:['Bringt eine Spur auf eine bestimmte Lautstärke, ohne den Klang zu verändern.','Für Podcasts: „Lautheit – gesamt“ mit −16 LUFS.'],
  'norm.mode':['Spitzenpegel: Die lauteste Stelle wird auf einen Wert gesetzt. Lautheit: so laut, wie es sich für Menschen anfühlt. Abschnittsweise: gleicht zusätzlich laute und leise Abschnitte an.','„Lautheit – gesamt“. Schwankt die Lautstärke stark: „abschnittsweise“.'],
  'norm.peak':['Wie laut die lauteste Stelle werden darf. 0 dB ist das absolute Maximum.','−1 dB.'],
@@ -1103,6 +1107,8 @@ const MEMO=new WeakMap();function memo(t,kind,i0,i1,fn){const a=t.ch[0];let m=ME
 function memoAsync(t,kind,i0,i1,afn){const a=t.ch[0];let m=MEMO.get(a);if(!m){m=new Map();MEMO.set(a,m)}const k=kind+':'+i0+':'+i1+':'+t.ch.length;
   if(m.has(k)){const v=m.get(k);return v&&v.pending?null:v}m.set(k,{pending:true});afn().then(v=>{m.set(k,v);updFxInfo()},()=>m.delete(k));return null}
 const FXP=lsGet('fxp',{});
+/* Standardwerte geändert (Nov 2026): gespeicherte ALTE Standardwerte einmalig auf die neuen setzen – selbst gewählte Werte bleiben */
+if(!lsGet('fxpMig1',false)){const M={gate:{hold:[200,250],rel:[120,150]},xgate:{hold:[250,300],rel:[150,180]}};for(const id in M)for(const k in M[id])if(FXP[id]&&FXP[id][k]===M[id][k][0])FXP[id][k]=M[id][k][1];lsSet('fxp',FXP);lsSet('fxpMig1',true)}
 function fxParams(fx){const p=FXP[fx.id]||(FXP[fx.id]={});for(const d of fx.params)if(p[d.k]===undefined)p[d.k]=d.def;return p}
 function fmtParam(d,v){if(d.fmt)return d.fmt(v);if(d.log)return v>=1000?nf(v/1000,v>=10000?0:1)+' kHz':Math.round(v)+' Hz';const dec=d.step>=1?0:d.step>=.1?1:2;return (d.min<0&&v>0?'+':'')+nf(v,dec)+(d.u?(d.u.startsWith(':')?'':' ')+d.u:'')}
 function buildFx(){const box=$('#fxList');box.innerHTML='';
@@ -1364,7 +1370,7 @@ function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;
 function opCut(){if(!editable())return;if(opCopy(true))opDelete('Ausschneiden')}
 function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage ist leer');stopAll();pushUndo('Einfügen');
   let ts=S.tracks.filter(t=>t.sel);if(!ts.length&&byId(S.focus))ts=[byId(S.focus)];const shTxt=true;
-  logOp(syncSet(ts),{k:'paste',a:S.sel.a,b:hasSel()?S.sel.b:S.sel.a,len:r4(Math.max(...S.clip.map(c=>c[0].length))/SR)});
+  {const lp={k:'paste',a:S.sel.a,b:hasSel()?S.sel.b:S.sel.a,len:r4(Math.max(...S.clip.map(c=>c[0].length))/SR)};logOp(ts,lp);logOp(syncSet(ts).filter(x=>!ts.includes(x)),{...lp,z:1})}
   if(hasSel()){const{a,b}=S.sel;for(const t of syncSet(ts))removeTime(t,a,b);if(shTxt)shiftTextDel(a,b)}
   const at=S.sel.a,len=Math.max(...S.clip.map(c=>c[0].length));let struct=false;if(shTxt)shiftTextIns(at,len/SR);
   const monoW=S.clip.some((chs,i)=>ts[i]&&tLen(ts[i])&&chs.length>ts[i].ch.length);/* Stereo in Mono-Spur → Hinweis */
@@ -1423,25 +1429,27 @@ function envDown(e,t,tw){if(!tLen(t))return;const r=tw.getBoundingClientRect(),H
   if(dbl&&near.sel&&envSelN()>1){envDelSel();return}
   if(dbl){pushUndo('Hüllkurvenpunkt löschen');t.env=t.env.filter(p=>p!==near);envChanged(t);toast('Punkt gelöscht');return}
   if(e.shiftKey&&near){for(const x of S.tracks)if(x!==t)for(const q of x.env||[])delete q.sel;if(near.sel)delete near.sel;else near.sel=true;lastDn={t:0,x:0,y:0,k:''};invalidate();const n=envSelN();setStatus(n+(n===1?' Punkt':' Punkte')+' ausgewählt');return}
-  if(e.shiftKey&&!near){envRect(e,t,tw);return}
-  if(!near&&envSelN()){envSelClear();return}/* Klick ins Leere hebt die Punkt-Auswahl auf */
+  if(e.shiftKey&&!near){envRect(e,t,tw,true);return}/* Shift: Rechteck ergänzt die Auswahl */
   if(near)lastDn={t:performance.now(),x:e.clientX,y:e.clientY,k:'env'+t.id};
+  /* neue Punkte nur direkt auf der Hüllkurven-Linie; Klick daneben = normale Auswahl */
+  const lt=tm-t.off,onLine=!near&&lt>=0&&lt<=len&&Math.abs(envY(envDbAt(t,lt),H)-y)<=7,inSel=hasSel()&&tm>S.sel.a&&tm<S.sel.b;
+  if(!near&&!onLine&&!inSel){envRect(e,t,tw,false);return}/* daneben: Auswahlrechteck für Punkte (einfacher Klick hebt die Auswahl auf) */
   pushUndo('Hüllkurve');t.env=(t.env||[]).map(p=>({...p}));let moved=false,mv;
   if(near&&near.sel&&t.env.filter(q=>q.sel).length>1){const grp=t.env.filter(q=>q.sel),o=grp.map(q=>[q.t,q.db]),mn=Math.min(...o.map(v=>v[0])),mx=Math.max(...o.map(v=>v[0])),t0=xToTime(sx-r.left),y0=sy;S.envDrag=grp.find(q=>Math.abs(q.t-near.t)<1e-9&&q.db===near.db)||null;
     mv=ev=>{if(!moved&&Math.abs(ev.clientX-sx)<2&&Math.abs(ev.clientY-sy)<2)return;moved=true;const dt=clamp(xToTime(ev.clientX-r.left)-t0,-mn,len-mx),dd=Math.round((envDb(ev.clientY-r.top,H)-envDb(y0-r.top,H))*10)/10;
       grp.forEach((q,i)=>{q.t=o[i][0]+dt;q.db=clamp(o[i][1]+dd,ENV_MIN,ENV_MAX)});setStatus(`${grp.length} Punkte · ${dt>=0?'+':''}${nf(dt,2)} s · ${fmtDb(dd)} dB`);invalidateTrack(t)}}
   else if(near){const p=t.env.find(q=>Math.abs(q.t-near.t)<1e-9&&q.db===near.db),i=t.env.indexOf(p),lo=i>0?t.env[i-1].t+.001:0,hi=i<t.env.length-1?t.env[i+1].t-.001:len;S.envDrag=p;
     mv=ev=>{if(!moved&&Math.abs(ev.clientX-sx)<2&&Math.abs(ev.clientY-sy)<2)return;moved=true;p.t=clamp(xToTime(ev.clientX-r.left)-t.off,lo,hi);p.db=envDb(ev.clientY-r.top,H);invalidateTrack(t)}}
-  else if(hasSel()&&tm>S.sel.a&&tm<S.sel.b){const a=clamp(S.sel.a-t.off,0,len),b=clamp(S.sel.b-t.off,0,len),rr=.02;
+  else if(!onLine&&inSel){const a=clamp(S.sel.a-t.off,0,len),b=clamp(S.sel.b-t.off,0,len),rr=.02;
     for(const lt of[Math.max(0,a-rr),a,b,Math.min(len,b+rr)])if(!t.env.some(p=>Math.abs(p.t-lt)<.0005))t.env.push({t:lt,db:Math.round(envDbAt(t,lt)*10)/10});t.env.sort((p,q)=>p.t-q.t);
     const inner=t.env.filter(p=>p.t>=a-1e-6&&p.t<=b+1e-6),orig=inner.map(p=>p.db);
     mv=ev=>{moved=true;let dd=-(ev.clientY-sy)*(ev.shiftKey?.05:.2);dd=Math.round(dd*10)/10;inner.forEach((p,i)=>p.db=clamp(orig[i]+dd,ENV_MIN,ENV_MAX));setStatus(`Auswahl ${fmtDb(dd)} dB`);invalidateTrack(t)}}
-  else{const p={t:clamp(tm-t.off,0,len),db:envDb(y,H)};t.env.push(p);t.env.sort((q,s)=>q.t-s.t);S.envDrag=p;moved=true;invalidateTrack(t);const i=t.env.indexOf(p),lo=i>0?t.env[i-1].t+.001:0,hi=i<t.env.length-1?t.env[i+1].t-.001:len;
+  else{const p={t:clamp(lt,0,len),db:Math.round(envDbAt(t,lt)*10)/10};/* genau auf die Linie setzen, dann folgt er der Maus */t.env.push(p);t.env.sort((q,s)=>q.t-s.t);S.envDrag=p;moved=true;invalidateTrack(t);const i=t.env.indexOf(p),lo=i>0?t.env[i-1].t+.001:0,hi=i<t.env.length-1?t.env[i+1].t-.001:len;
     mv=ev=>{p.t=clamp(xToTime(ev.clientX-r.left)-t.off,lo,hi);p.db=envDb(ev.clientY-r.top,H);invalidateTrack(t)}}
   tracksEl.setPointerCapture(e.pointerId);
   const up=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);setStatus('Bereit');if(!moved){S.undo.pop();S.envDrag=null;invalidate();return}envChanged(t)};
   tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
-function toggleEnv(){S.envMode=!S.envMode;document.body.classList.toggle('envmode',S.envMode);updTransport();invalidate();if(!S.envMode)envSelClear();toast(S.envMode?'Hüllkurve: Klick setzt Punkte · Shift+Ziehen wählt mehrere aus (Entf löscht) · im markierten Bereich hoch/runter ziehen = Passage lauter/leiser':'Hüllkurve aus',S.envMode?6000:2000)}
+function toggleEnv(){S.envMode=!S.envMode;document.body.classList.toggle('envmode',S.envMode);updTransport();invalidate();if(!S.envMode)envSelClear();toast(S.envMode?'Hüllkurve: Klick auf die Linie setzt Punkte · daneben ziehen wählt mehrere aus (Entf löscht) · im markierten Bereich hoch/runter ziehen = Passage lauter/leiser':'Hüllkurve aus',S.envMode?6000:2000)}
 function envTargets(){const ts=(S.tracks.filter(t=>t.sel).length?S.tracks.filter(t=>t.sel):[byId(S.focus)].filter(Boolean)).filter(t=>t.env&&t.env.length);if(!ts.length)toast('Keine Hüllkurve auf den ausgewählten Spuren');return ts}
 /* Effekt auf [i0,i1) anwenden. Gates mit Option „als Hüllkurve“ ändern das Audio nicht, sondern setzen Hüllkurvenpunkte. */
 async function fxApply(fx,p,c,t,i0,i1,onp){
@@ -1469,13 +1477,13 @@ function envSelectAll(){const t=byId(S.focus)||S.tracks.find(x=>x.sel);if(!t||!(
 function envDelSel(){const ts=S.tracks.filter(t=>(t.env||[]).some(q=>q.sel));if(!ts.length)return false;stopAll();pushUndo('Hüllkurvenpunkte löschen');let n=0;
   for(const t of ts){const k=t.env.length;t.env=t.env.filter(q=>!q.sel);n+=k-t.env.length;logEnv(t)}if(P.on)play(pos(),P.to,P.loop,P.loopFrom);changed();toast(n+(n===1?' Punkt':' Punkte')+' gelöscht');return true}
 /* Rechteck aufziehen (Shift+Ziehen auf freier Fläche): Punkte darin kommen zur Auswahl dazu */
-function envRect(e,t,tw){const r=tw.getBoundingClientRect(),H=r.height,sx=e.clientX,sy=e.clientY,box=el('div','envRect');document.body.append(box);
+function envRect(e,t,tw,add){const r=tw.getBoundingClientRect(),H=r.height,sx=e.clientX,sy=e.clientY,box=el('div','envRect');document.body.append(box);
   const pick=ev=>{const x0=Math.min(sx,ev.clientX),x1=Math.max(sx,ev.clientX),y0=Math.min(sy,ev.clientY),y1=Math.max(sy,ev.clientY);
     Object.assign(box.style,{left:x0+'px',top:y0+'px',width:(x1-x0)+'px',height:(y1-y0)+'px'});const t0=xToTime(x0-r.left)-t.off,t1=xToTime(x1-r.left)-t.off;
     return(t.env||[]).filter(q=>q.t>=t0&&q.t<=t1&&envY(q.db,H)>=y0-r.top-4&&envY(q.db,H)<=y1-r.top+4)};
   const mv=ev=>{const n=pick(ev).length;setStatus(n+(n===1?' Punkt':' Punkte')+' im Rechteck')};
   const up=ev=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);const got=pick(ev);box.remove();
-    for(const x of S.tracks)if(x!==t)for(const q of x.env||[])delete q.sel;got.forEach(q=>q.sel=true);invalidate();const n=(t.env||[]).filter(q=>q.sel).length;
+    for(const x of S.tracks)if(x!==t||!add)for(const q of x.env||[])delete q.sel;got.forEach(q=>q.sel=true);invalidate();const n=(t.env||[]).filter(q=>q.sel).length;
     setStatus(n?n+(n===1?' Punkt':' Punkte')+' ausgewählt · ziehen = verschieben · Entf = löschen · Esc = Auswahl aufheben':'Bereit')};
   tracksEl.setPointerCapture(e.pointerId);tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
 /* Zurücksetzen: mit Markierung nur dort (gewählte Spuren; ohne Wahl oder mit Sync alle mit Hüllkurve), sonst alle Hüllkurven komplett */
@@ -1576,7 +1584,7 @@ function moveAcross(src,a,b,dst,P){const NL=Math.round((b-a)*SR),L=NL/SR;if(NL<1
   if(isNew){dst=newTrack({name:src.name+' (Teil)',off:P,ch:seg,vol:src.vol,pan:src.pan});dst.clr=clrNorm(aPieces(srcAbs,a,b,src.color).map(q=>({...q})));S.tracks.push(dst)}
   else{F=tLen(dst)?gapAt(dst,P,NL):0;const dAbs=clrAbs(dst),pcs=aPieces(srcAbs,a,b,src.color!==dst.color?src.color:null),off0=dst.off,ext=(NL-F)/SR,fe=P+F/SR;logOp([dst],{k:'paste',a:P,b:fe,len:r4(L)});insertFill(dst,P,seg,F);remapCuts(dst,off0,x=>x>=fe-1e-9&&x>P+1e-9?x+ext:x);clrFromAbs(dst,aIns(aDel(dAbs,P,fe),P,L,pcs));mkCut(dst,[P,P+L])}
   const ext=NL-F;/* nur der Überstand über die Lücke verschiebt den Rest */
-  if(sync&&ext>0){const E=ext/SR,oth=S.tracks.filter(x=>x!==dst&&!x.lock&&tLen(x)&&P<tEnd(x));logOp(oth,{k:'paste',a:P,b:P,len:r4(E)});for(const x of oth){insertSilence(x,P,ext);mkCut(x,[P,P+E])}shiftTextIns(P+F/SR,E);for(const k of TKEYS)sortT(k)}
+  if(sync&&ext>0){const E=ext/SR,oth=S.tracks.filter(x=>x!==dst&&!x.lock&&tLen(x)&&P<tEnd(x));logOp(oth,{k:'paste',a:P,b:P,len:r4(E),z:1});for(const x of oth){insertSilence(x,P,ext);mkCut(x,[P,P+E])}shiftTextIns(P+F/SR,E);for(const k of TKEYS)sortT(k)}
   S.tracks.forEach(x=>x.sel=x===dst);S.focus=dst.id;setSel(P,P+NL/SR);changed(true);toast('Passage nach „'+dst.name+'“ verschoben'+(F>0?' · Lücke gefüllt'+(ext>0?', Rest nur um '+nf(ext/SR,1)+' s verschoben':''):'')+(sync&&ext>0?' · übrige Spuren synchron gehalten':'')+(mono?' · ⚠ Stereo wurde in Mono umgewandelt (Zielspur ist Mono)':''),mono?5000:2800)}
 
 /* ============================== Bearbeitungsprotokoll & Rezepte ==============================
@@ -1585,10 +1593,12 @@ function moveAcross(src,a,b,dst,P){const NL=Math.round((b-a)*SR),L=NL/SR;if(NL<1
    Als „Rezept“ (.aerezept, JSON) lässt es sich speichern und auf andere Spuren anwenden.
    Effekte auf der ganzen Spur passen auf jede Aufnahme; zeitbezogene Schritte (Schnitte, Löschen, Verschieben …) nur bei gleichem Zeitverlauf. */
 const r4=x=>Math.round(x*1e4)/1e4,LOG_MAX=500;
-function logOp(ts,e){for(const t of ts){if(!t)continue;const rel=x=>x==null?x:r4(x-t.off),o={...e,at:Date.now()};
+/* Original der Spur beim ersten Protokolleintrag merken (nur Verweise – Seq ist unveränderlich) – Grundlage fürs Entfernen von Effekten */
+function logBase(t){if(!(t.log||[]).length)t.base={ch:t.ch.slice(),off:t.off,cuts:(t.cuts||[]).slice(),env:(t.env||[]).map(q=>({...q})),clr:(t.clr||[]).map(q=>({...q}))}}
+function logOp(ts,e){for(const t of ts){if(!t)continue;logBase(t);const rel=x=>x==null?x:r4(x-t.off),o={...e,at:Date.now(),u:S.lastUndoId};
     for(const k of['a','b','T','from','to'])if(k in o)o[k]=rel(o[k]);if(o.pts)o.pts=o.pts.map(rel);if(Array.isArray(o.r))o.r=o.r.map(rel);
-    t.log=(t.log||[]).concat([o]);if(t.log.length>LOG_MAX)t.log=t.log.slice(-LOG_MAX)}}
-function logEnv(t){const L=t.log||[],last=L[L.length-1],e={k:'env',env:(t.env||[]).map(p=>({t:r4(p.t),db:Math.round(p.db*100)/100})),at:Date.now()};
+    t.log=(t.log||[]).concat([o]);if(t.log.length>LOG_MAX){t.log=t.log.slice(-LOG_MAX);t.logCut=true}}}
+function logEnv(t){logBase(t);const L=t.log||[],last=L[L.length-1],e={k:'env',env:(t.env||[]).map(p=>({t:r4(p.t),db:Math.round(p.db*100)/100})),at:Date.now(),u:S.lastUndoId};
   t.log=last&&last.k==='env'?L.slice(0,-1).concat([e]):L.concat([e])}/* viele kleine Hüllkurven-Änderungen = ein Eintrag mit dem Endstand */
 function logFx(t,fx,p,i0,i1){const n=tLen(t),r=(fx.id==='fin'||fx.id==='fout')&&!hasSel()?'auto':i0<=0&&i1>=n?null:[t.off+i0/SR,t.off+i1/SR],e={k:'fx',id:fx.id,p:{...p},r};
   if(S.noise&&(fx.id==='nr'||fx.id==='enh'))e.noise={dur:S.noise.dur,pow:Array.from(S.noise.pow,v=>+v.toPrecision(4))};logOp([t],e)}
@@ -1600,12 +1610,15 @@ function stepTitle(e){const T=fmtT,R=r=>r==null?'ganze Spur':r==='auto'?(e.id===
     case'cutmv':return'Schnitt verschoben '+T(e.from)+' → '+T(e.to);case'move':return'Passage '+T(e.a)+' – '+T(e.b)+' verschoben nach '+T(e.T);
     case'env':return e.env.length?'Hüllkurve ('+e.env.length+' Punkte)':'Hüllkurve zurückgesetzt';case'envapply':return'Hüllkurve ins Audio übernommen'}return e.k}
 let logSig='';
-function renderLog(){const t=byId(S.focus)||S.tracks.find(x=>x.sel)||(S.tracks.length===1?S.tracks[0]:null),L=t?(t.log||[]):[],sig=(t?t.id:'-')+':'+L.length+':'+(L.length?L[L.length-1].at:0)+':'+(t?t.name:'');
+function renderLog(){const t=byId(S.focus)||S.tracks.find(x=>x.sel)||(S.tracks.length===1?S.tracks[0]:null),L=t?(t.log||[]):[],sig=(t?t.id:'-')+':'+L.length+':'+(L.length?L[L.length-1].at:0)+':'+(t?t.name:'')+':'+S.undo.map(u=>u.id).join(',');
   if(sig===logSig)return;logSig=sig;const box=$('#logList');if(!box)return;box.innerHTML='';
   $('#logHead').innerHTML=!t?'Spur auswählen, um ihr Protokoll zu sehen.':L.length?`<b>${esc(t.name)}</b> · ${L.length} ${L.length===1?'Schritt':'Schritte'}`:`<b>${esc(t.name)}</b> · noch keine Bearbeitungen`;
   const from=Math.max(0,L.length-60);if(from)box.append(el('div','hint',`… ${from} ältere Schritte (im Rezept enthalten)`));
-  for(let i=from;i<L.length;i++){const e=L[i],d=el('div','lg'+(isTimed(e)?' tb':''));d.innerHTML=`<span class="n">${i+1}</span><span class="tx"></span><span class="tm">${new Date(e.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</span>`;
-    $('.tx',d).textContent=stepTitle(e);if(isTimed(e))d.dataset.tip='Zeitbezogener Schritt: passt beim Wiederholen nur auf eine Spur mit gleichem Zeitverlauf (z. B. das zweite Mikrofon derselben Aufnahme).';box.append(d)}
+  for(let i=from;i<L.length;i++){const e=L[i],jump=!!e.u&&S.undo.some(u=>u.id===e.u),rm=stepRemovable(e)&&!!t.base,d=el('div','lg'+(isTimed(e)?' tb':'')+(jump?'':' nj'));
+    d.innerHTML=`<span class="n">${i+1}</span><span class="tx"></span><span class="tm">${new Date(e.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}</span>${rm?'<span class="rm">×</span>':''}`;
+    $('.tx',d).textContent=stepTitle(e);
+    d.dataset.tip=(jump?'Klick: Spur auf den Stand <b>vor</b> diesem Schritt zurücksetzen (wie mehrmals Strg+Z – mit Strg+Y wiederherstellbar).':'Zurückspringen geht nur innerhalb der letzten 20 Rückgängig-Schritte.')+(rm?'<br><b>×</b>: nur diesen Effekt entfernen – der Rest wird aus dem Original neu berechnet.':'')+(isTimed(e)?'<br>Zeitbezogener Schritt: passt beim Wiederholen nur auf eine Spur mit gleichem Zeitverlauf.':'');
+    d.onclick=ev=>{if(ev.target.closest('.rm'))removeStep(t,i);else if(jump)jumpToStep(t,i);else toast('Dieser Stand liegt nicht mehr in den letzten 20 Rückgängig-Schritten')};box.append(d)}
   box.scrollTop=box.scrollHeight;const has=!!(t&&L.length);$('#logSave').disabled=!has;$('#logClr').disabled=!has}
 /* ---- Wiederholen eines Schritts auf einer Spur (ohne Undo – das macht applyRecipe einmal für alles) ---- */
 async function replayStep(t,e,onp){const A=x=>t.off+x,n=tLen(t),idx=(a,b)=>[clamp(Math.round(a*SR),0,n),clamp(Math.round(b*SR),0,n)];
@@ -1630,8 +1643,8 @@ async function replayStep(t,e,onp){const A=x=>t.off+x,n=tLen(t),idx=(a,b)=>[clam
   return false}
 async function applyRecipe(ts,steps,name){if(!editable()||!steps.length)return;stopAll();setBusy(true,'Rezept „'+name+'“ …',true);await paintPause();pushUndo('Rezept: '+name);let done=0,skip=0;
   try{for(let i=0;i<steps.length;i++){const e=steps[i];setBusyLabel(`${name} · Schritt ${i+1} von ${steps.length}: ${stepTitle(e)}`);
-      for(let j=0;j<ts.length;j++){const t=ts[j],ok=await replayStep(t,e,f=>progress((i+(j+clamp(f,0,1))/ts.length)/steps.length));
-        if(ok){done++;t.log=(t.log||[]).concat([{...e,at:Date.now()}])}else skip++;await yieldUI()}}
+      for(let j=0;j<ts.length;j++){const t=ts[j];if(i===0)logBase(t);const ok=await replayStep(t,e,f=>progress((i+(j+clamp(f,0,1))/ts.length)/steps.length));
+        if(ok){done++;t.log=(t.log||[]).concat([{...e,at:Date.now(),u:S.lastUndoId}])}else skip++;await yieldUI()}}
     changed(true);toast(`Rezept „${name}“ angewendet · ${done} ${done===1?'Schritt':'Schritte'}${skip?` · ${skip} übersprungen (passte nicht)`:''}`,4000)}
   catch(err){const u=S.undo.pop();if(u)restoreSnap(u);if(err.cancelled)toast('Rezept abgebrochen – nichts geändert');else{console.error(err);toast('Rezept abgebrochen: '+err.message,5000)}}
   finally{setBusy(false)}}
@@ -1670,6 +1683,26 @@ function recipeDialog(r){const ts=targets();if(!ts)return;const same=ts.every(t=
   const all=v=>$$('#rzSteps input').forEach(c=>c.checked=typeof v==='function'?v(r.steps[+c.dataset.i]):v);
   $('#rzAll').onclick=()=>all(true);$('#rzNone').onclick=()=>all(false);$('#rzFx').onclick=()=>all(e=>!isTimed(e));$('#rzN').onclick=closeModal;
   $('#rzY').onclick=()=>{const steps=$$('#rzSteps input').filter(c=>c.checked).map(c=>r.steps[+c.dataset.i]);closeModal();if(!steps.length)return toast('Kein Schritt ausgewählt');applyRecipe(ts,steps,r.name)}}
+/* Zurückspringen: alle Schritte bis einschließlich diesem rückgängig machen (global wie Strg+Z, mit Strg+Y wiederherstellbar) */
+async function jumpToStep(t,i){const e=(t.log||[])[i];if(!e)return;const k=S.undo.findIndex(u=>u.id===e.u);if(!e.u||k<0)return toast('Dieser Stand liegt nicht mehr in den letzten 20 Rückgängig-Schritten');
+  const n=S.undo.length-k,others=S.undo.slice(k).length;
+  if(!await confirmBox('Zurück zu diesem Stand?',`Die Spur wird auf den Stand vor „${stepTitle(e)}“ zurückgesetzt. Dafür werden die letzten ${n} ${n===1?'Bearbeitungsschritt':'Bearbeitungsschritte'} rückgängig gemacht – auch solche auf anderen Spuren. Mit Strg+Y lässt sich alles wiederherstellen.`,'Zurückspringen'))return;
+  for(let j=0;j<n;j++)undo();toast(`Zurückgesprungen · ${n} ${n===1?'Schritt':'Schritte'} rückgängig (Strg+Y stellt wieder her)`,3500)}
+/* Effekt entfernen: nur Effekte auf der ganzen Spur. Original wiederherstellen und alle übrigen Schritte neu anwenden */
+const stepRemovable=e=>!!e&&e.k==='fx'&&e.r==null&&!!FXM[e.id]&&!FXM[e.id].lenChange;
+async function removeStep(t,i){const L=t.log||[],e=L[i];if(!stepRemovable(e)||!editable())return;
+  if(!t.base)return toast('Das Original dieser Spur ist nicht mehr verfügbar (z. B. nach einem Neustart) – nutze Zurückspringen bzw. Strg+Z',5000);
+  if(t.logCut)return toast('Das Protokoll ist zu lang geworden – Entfernen ist hier nicht mehr möglich',4500);
+  const rest=L.filter((_,k)=>k!==i);
+  if(rest.some(x=>x.k==='paste'&&!x.z))return toast('Geht nicht: In diese Spur wurde Audio eingefügt, das sich nicht neu berechnen lässt – nutze stattdessen Zurückspringen (Klick auf den Eintrag)',6000);
+  if(L.slice(i+1).some(x=>x.k==='trunc'))return toast('Geht nicht: Danach wurde „Stille kürzen“ angewendet – Schnitte und Pausen würden sich verschieben',6000);
+  if(!await confirmBox('Effekt entfernen?',`„${stepTitle(e)}“ wird aus der Spur entfernt. Der Editor nimmt das Original von „${t.name}“ und wendet die übrigen ${rest.length} ${rest.length===1?'Schritt':'Schritte'} neu an – bei langen Aufnahmen kann das etwas dauern. Mit Strg+Z rückgängig.`,'Entfernen'))return;
+  stopAll();setBusy(true,'Berechne Spur neu …',true);await paintPause();pushUndo('Effekt entfernen: '+stepTitle(e));const uid=S.lastUndoId,b=t.base;
+  try{t.ch=b.ch.slice();t.off=b.off;t.cuts=b.cuts.slice();t.env=b.env.map(q=>({...q}));t.clr=b.clr.map(q=>({...q}));t.log=[];
+    for(let k=0;k<rest.length;k++){setBusyLabel(`Neu berechnen · ${k+1} von ${rest.length}: ${stepTitle(rest[k])}`);await replayStep(t,rest[k],f=>progress((k+clamp(f,0,1))/rest.length));t.log.push({...rest[k],u:uid});progress((k+1)/rest.length);await yieldUI()}
+    t.base=b;logSig='';changed(true);toast(`„${FXM[e.id].name}“ entfernt – Spur neu berechnet`,3500)}
+  catch(err){const u=S.undo.pop();if(u)restoreSnap(u);toast(err.cancelled?'Abgebrochen – nichts geändert':'Fehler: '+err.message,4500)}
+  finally{setBusy(false)}}
 function clearLog(){const t=byId(S.focus)||S.tracks.find(x=>x.sel);if(!t||!(t.log||[]).length)return;pushUndo('Protokoll leeren');t.log=[];logSig='';changed();toast('Protokoll geleert (Strg+Z holt es zurück)')}
 $('#logSave').onclick=saveRecipeDlg;$('#logApply').onclick=recipeSources;$('#logClr').onclick=clearLog;
 $('#logSave').dataset.tip='Speichert alle Bearbeitungsschritte dieser Spur als Rezept – z. B. deine Effekt-Einstellungen für die Podcast-Stimme. <span class="rec"><b>Tipp:</b> Effekte auf der ganzen Spur passen auf jede neue Aufnahme.</span>';
@@ -1859,7 +1892,7 @@ const fmtMB=b=>b>=1e9?nf(b/1e9,1)+' GB':Math.max(1,Math.round(b/1e6))+' MB';
 async function updStore(){const el2=$('#storeInfo');if(!el2)return;let used=null;try{const e=await navigator.storage.estimate();used=e.usage}catch{}
   el2.innerHTML=`Browser-Zwischenspeicher: <b>${used!=null?fmtMB(used):'?'}</b> (die letzten bis zu 10 Sitzungen, im Profilordner von Chrome/Edge)`}
 async function clearStore(){if(!await confirmBox('Browser-Zwischenspeicher leeren?','Alle automatisch gespeicherten Sitzungen (auch die Liste „Letzte Sitzungen“) werden aus dem Browser gelöscht. Deine geöffneten Spuren, gespeicherten .aeproj-Dateien und Backups bleiben erhalten.','Leeren'))return;
-  const ks=await idb.keys();await idb.delMany(ks.filter(k=>k==='session'||k==='meta'||k==='sessions'||String(k).startsWith('ses:')||String(k).startsWith('a:')));S.sid=null;SESIDS.clear();for(const t of S.tracks)for(const s of t.ch)for(const blk of s.b)AID.delete(blk);updStore();toast('Zwischenspeicher geleert – wird beim nächsten Bearbeiten neu angelegt')}let bkDir=null,bkLast=0,bkT=null,bkNeed=false;
+  const ks=await idb.keys();await idb.delMany(ks.filter(k=>k==='session'||k==='meta'||k==='sessions'||String(k).startsWith('ses:')||String(k).startsWith('a:')));S.sid=null;for(const t of S.tracks)for(const s of t.ch)for(const blk of s.b)AID.delete(blk);updStore();toast('Zwischenspeicher geleert – wird beim nächsten Bearbeiten neu angelegt')}let bkDir=null,bkLast=0,bkT=null,bkNeed=false;
 const saveBk=()=>lsSet('backup',{on:BK.on,min:BK.min,keep:BK.keep,v2:1});
 const fmtStamp=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`;
 async function bkInit(){if(!window.showDirectoryPicker){$('#bkInfo').textContent='Automatische Sicherung braucht Chrome oder Edge.';$$('#secBk input,#secBk select,#secBk button').forEach(x=>x.disabled=true);return}
@@ -1874,7 +1907,7 @@ async function runBackup(manual){if(!S.tracks.length){if(manual)toast('Nichts zu
     if(BK.keep>0){const list=[];for await(const[n,h]of bkDir.entries())if(h.kind==='file'&&n.startsWith(base)&&n.endsWith('.aeproj'))list.push(n);list.sort();while(list.length>BK.keep)await bkDir.removeEntry(list.shift())}
     updBk();if(manual)toast('Backup gespeichert: '+nm,3500)}catch(e){console.warn(e);setStatus('Backup fehlgeschlagen: '+e.message)}finally{setTimeout(()=>$('#bAuto').classList.remove('run'),600)}}
 function updBkIcon(){const a=$('#bAuto');if(!a)return;const tm=bkLast?new Date(bkLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
-  a.classList.toggle('on',BK.on&&!!bkDir&&!bkNeed);a.classList.toggle('warn',BK.on&&(bkNeed||!bkDir)&&!!window.showDirectoryPicker);
+  a.classList.toggle('on',BK.on&&!!bkDir&&!bkNeed);a.classList.toggle('warn',BK.on&&bkNeed&&!!bkDir&&!!window.showDirectoryPicker);a.classList.toggle('nodir',!bkDir&&!!window.showDirectoryPicker);/* rot: noch kein Sicherungsordner */
   a.title=!window.showDirectoryPicker?'Automatische Sicherung: braucht Chrome oder Edge':!bkDir?(BK.on?'Automatische Sicherung ist an, aber es fehlt noch ein Ordner – Klick: Ordner wählen':'Automatische Sicherung aus – Klick: Ordner wählen und einschalten'):bkNeed?'Sicherung pausiert – Klick: Zugriff auf „'+bkDir.name+'“ erlauben':
     BK.on?`Automatische Sicherung aktiv: alle ${BK.min} Min. nach „${bkDir.name}“${tm?' · letzte '+tm+' Uhr':''}\nKlick: ausschalten`:`Automatische Sicherung aus (Ordner „${bkDir.name}“)\nKlick: einschalten`}
 async function toggleAutoBk(){if(!window.showDirectoryPicker)return toast('Automatische Sicherung braucht Chrome oder Edge');
@@ -1897,7 +1930,7 @@ const AID=new WeakMap();let saveN=0;
 let saveT;function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(saveSession,2000);S.dirtyBk=true;if(!S.dirty){S.dirty=true;updTitle()}}
 /* Mehrere Sitzungen: Liste „sessions“ (neueste zuerst, max. SES_MAX), je Sitzung ein Dokument „ses:<id>“ mit Block-IDs.
    Audioblöcke („a:…“) werden erst gelöscht, wenn keine gespeicherte Sitzung sie mehr braucht. */
-const SES_MAX=10,SESIDS=new Map();
+const SES_MAX=10;
 const newSid=()=>'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const sesList=async()=>(await idb.get('sessions'))||[];
 const sesName=()=>S.projName||(S.tracks[0]&&S.tracks[0].name)||'Unbenannt';
@@ -1906,25 +1939,30 @@ async function migrateOnce(){const old=await idb.get('session');if(!old)return s
   list.unshift({sid,name:old.projName||(old.tracks&&old.tracks[0]&&old.tracks[0].name)||'Unbenannt',n:m.n||(old.tracks||[]).length,dur:m.dur||0,saved:m.saved||Date.now(),bytes:0});
   list.sort((x,y)=>y.saved-x.saved);await idb.putMany([['ses:'+sid,old],['sessions',list.slice(0,SES_MAX)]]);await idb.delMany(['session','meta']);return sesTidy()}
 async function sesTidy(){const ids=new Set((await sesList()).map(e=>'ses:'+e.sid)),orph=(await idb.keys()).filter(k=>typeof k==='string'&&k.startsWith('ses:')&&!ids.has(k));if(orph.length)await idb.delMany(orph)}/* verwaiste Sitzungsdokumente entfernen */
-async function sesBlockIds(sid){if(!SESIDS.has(sid)){const d=await idb.get('ses:'+sid);SESIDS.set(sid,new Set(d&&d.tracks?d.tracks.flatMap(t=>t.chB?t.chB.flat():(t.chIds||[])):[]))}return SESIDS.get(sid)}
-async function gcBlocks(used,others){const cand=(await idb.keys()).filter(k=>typeof k==='string'&&k.startsWith('a:')&&!used.has(k));if(!cand.length)return;
+async function sesBlockIds(sid){const d=await idb.get('ses:'+sid);return new Set(d&&d.tracks?d.tracks.flatMap(t=>t.chB?t.chB.flat():(t.chIds||[])):[])}/* immer frisch – andere Tabs können sie geändert haben */
+/* Speichern/Aufräumen nie gleichzeitig in mehreren Tabs (Web Locks); ohne Unterstützung direkt */
+const storeLock=fn=>navigator.locks&&navigator.locks.request?navigator.locks.request('podcast-editor-store',fn):fn();
+async function gcBlocks(used,others,curSid){const fresh=(await sesList()).filter(e=>e.sid!==curSid);if(fresh.length)others=fresh;/* aktuelle Liste aus dem Speicher */
+  const cand=(await idb.keys()).filter(k=>typeof k==='string'&&k.startsWith('a:')&&!used.has(k));if(!cand.length)return;
   const keep=new Set();for(const e of others)for(const id of await sesBlockIds(e.sid))keep.add(id);
   const old=cand.filter(k=>!keep.has(k));if(!old.length)return;await idb.delMany(old);const oset=new Set(old);
   for(const t of S.undo.concat(S.redo))for(const tr of t.tracks)for(const s of tr.ch)for(const blk of s.b)if(oset.has(AID.get(blk)))AID.delete(blk)}
 async function saveSession(){if(R.on||S.busy||S.saving||S.dragMv)return scheduleSave();/* nicht mitten im Ziehen sichern (Vorschau-Zustand) */if(!S.tracks.length)return;/* leere Spurliste: letzten Stand der Sitzung behalten */
   S.saving=true;try{await saveSessionNow()}finally{S.saving=false}}
-async function saveSessionNow(){
+async function saveSessionNow(){return storeLock(saveSessionLocked)}
+async function saveSessionLocked(){
   await migrateSessions();if(!S.sid)S.sid=newSid();const sid=S.sid;
+  const have=new Set(await idb.keys());/* was wirklich im Speicher liegt – Blöcke mit ID, die fehlen, werden neu geschrieben */
   /* pro Block speichern: nur Blöcke ohne ID sind neu; in kleinen Paketen mit Pausen schreiben, damit nichts hängt */
-  const fresh=[],ref=t=>t.ch.map(s=>s.b.map(blk=>{let id=AID.get(blk);if(!id){id='a:'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());fresh.push([id,blk]);AID.set(blk,id)}return id}));
-  const tracks=S.tracks.map(t=>({id:t.id,name:t.name,chB:ref(t),cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,clr:t.clr||[],off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h}));
+  const fresh=[],ref=t=>t.ch.map(s=>s.b.map(blk=>{let id=AID.get(blk);if(!id||!have.has(id)){id=id||'a:'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());fresh.push([id,blk]);have.add(id);AID.set(blk,id)}return id}));
+  const tracks=S.tracks.map(t=>({id:t.id,name:t.name,chB:ref(t),chN:t.ch.map(s=>s.b.map(blk=>blk.length)),cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,clr:t.clr||[],off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h}));
   try{for(let i=0;i<fresh.length;i+=8){await idb.putMany(fresh.slice(i,i+8).map(([id,blk])=>[id,blk.slice()]));await yieldUI()}/* slice: nur die Bytes des Blocks, nicht den ganzen Puffer */
     let list=(await sesList()).filter(e=>e.sid!==sid);list.unshift({sid,name:sesName(),n:S.tracks.length,dur:projDur(),saved:Date.now(),bytes:projBytes()});
     const drop=list.slice(SES_MAX);list=list.slice(0,SES_MAX);
-    await idb.putMany([['ses:'+sid,{v:3,sr:SR,tid:TID,mid:MID,sel:S.sel,view:S.view,marks:S.marks,notes:S.notes,subs:S.subs,projName:S.projName||'',tracks}],['sessions',list]]);SESIDS.delete(sid);
-    if(drop.length){await idb.delMany(drop.map(e=>'ses:'+e.sid));for(const e of drop)SESIDS.delete(e.sid)}
+    await idb.putMany([['ses:'+sid,{v:3,sr:SR,tid:TID,mid:MID,sel:S.sel,view:S.view,marks:S.marks,notes:S.notes,subs:S.subs,projName:S.projName||'',tracks}],['sessions',list]]);
+    if(drop.length)await idb.delMany(drop.map(e=>'ses:'+e.sid));
     /* aufräumen: Blöcke, die weder der aktuelle Stand noch eine andere gespeicherte Sitzung braucht (Undo-Verlauf wird nach einem Neustart nicht wiederhergestellt) */
-    await gcBlocks(new Set(tracks.flatMap(t=>t.chB.flat())),list.filter(e=>e.sid!==sid));
+    await gcBlocks(new Set(tracks.flatMap(t=>t.chB.flat())),list.filter(e=>e.sid!==sid),sid);
     saveN++;if(saveN%5===1)updStore()}
   catch(e){console.warn('Autospeichern fehlgeschlagen',e);for(const[,blk]of fresh)AID.delete(blk)}}
 async function resample(chs,from,to){chs=chs.map(x=>x instanceof Seq?x.slice():x);const n=chs[0].length,oc=new OfflineAudioContext(chs.length,Math.max(1,Math.round(n*to/from)),to),b=oc.createBuffer(chs.length,Math.max(1,n),from);chs.forEach((a,c)=>b.copyToChannel(a,c));const s=oc.createBufferSource();s.buffer=b;s.connect(oc.destination);s.start();const r=await oc.startRendering();return chs.map((_,c)=>r.getChannelData(c).slice())}
@@ -1939,15 +1977,20 @@ let recentN=0;async function renderRecent(){const box=$('#recent');if(!box)retur
   const tot=L.reduce((a,e)=>a+(e.bytes||0),0);$('.foot',box).textContent=`Automatisch im Browser gesichert · die letzten ${SES_MAX} Sitzungen bleiben erhalten${tot?' · belegt ca. '+fmtMB(tot):''}`;box.style.display=''}
 const checkRestore=renderRecent;
 async function delSession(e){if(!await confirmBox('Sitzung löschen?',`„${e.name}“ (${fmtWhen(e.saved)}) wird aus dem Verlauf und dem Browser-Speicher entfernt. Gespeicherte .aeproj-Dateien und Backups bleiben erhalten.`,'Löschen'))return;
-  const list=(await sesList()).filter(x=>x.sid!==e.sid);await idb.putMany([['sessions',list]]);await idb.del('ses:'+e.sid);SESIDS.delete(e.sid);if(S.sid===e.sid)S.sid=null;
-  const used=new Set();for(const t of S.tracks)for(const s of t.ch)for(const blk of s.b){const id=AID.get(blk);if(id)used.add(id)}
-  await gcBlocks(used,list);renderRecent();updStore();toast('Sitzung gelöscht')}
+  await storeLock(async()=>{const list=(await sesList()).filter(x=>x.sid!==e.sid);await idb.putMany([['sessions',list]]);await idb.del('ses:'+e.sid);if(S.sid===e.sid)S.sid=null;
+    const used=new Set();for(const t of S.tracks)for(const s of t.ch)for(const blk of s.b){const id=AID.get(blk);if(id)used.add(id)}
+    await gcBlocks(used,list,S.sid)});renderRecent();updStore();toast('Sitzung gelöscht')}
 async function restoreSession(sid){if(S.tracks.length)return;setBusy(true,'Stelle Sitzung wieder her …');try{const d=await idb.get('ses:'+sid);if(!d)throw new Error('Keine Daten gefunden');
     let nb=0,tot=d.tracks.reduce((s,t)=>s+(t.chB?t.chB.flat().length:1),0);
-    for(const t of d.tracks){if(t.chB){t.ch=[];for(const ids of t.chB){const blocks=[];for(const id of ids){const a=await idb.get(id);if(!a)throw new Error('Audiodaten fehlen');AID.set(a,id);blocks.push(a);progress(++nb/tot)}t.ch.push(new Seq(blocks))}delete t.chB}
+    let miss=0,guess=false;/* fehlende Blöcke: durch Stille gleicher Länge ersetzen (ältere Sitzungen ohne Längenangabe: Standard-Blocklänge) */
+    for(const t of d.tracks){if(t.chB){const chs=[];for(let ci=0;ci<t.chB.length;ci++){const ids=t.chB[ci],ns=t.chN&&t.chN[ci],blocks=[];
+        for(let bi=0;bi<ids.length;bi++){const id=ids[bi];let a=await idb.get(id);if(a)AID.set(a,id);else{const len=ns&&ns[bi]?ns[bi]:(guess=true,BLK);a=new Float32Array(len);miss+=len}blocks.push(a);progress(++nb/tot)}chs.push(new Seq(blocks))}
+        t.ch=chs;delete t.chB;delete t.chN}
       else if(t.chIds){t.ch=[];for(const id of t.chIds){const a=await idb.get(id);if(!a)throw new Error('Audiodaten fehlen');t.ch.push(a)}delete t.chIds}}
     for(const t of d.tracks){if(d.sr!==SR)t.ch=await resample(t.ch,d.sr,SR);t.ch=t.ch.map(sq)}S.tracks=d.tracks.map(t=>({...t,sel:false}));TID=Math.max(d.tid||1,...S.tracks.map(t=>t.id+1));S.sel=d.sel||{a:0,b:0};S.view=d.view||S.view;S.undo=[];S.redo=[];S.projName=d.projName||'';for(const k of TKEYS)S[k]=(d[k]||[]).map(x=>({...x}));MID=Math.max(d.mid||1,...TKEYS.flatMap(k=>S[k].map(x=>x.id+1)));
-    S.sid=sid;S.projHandle=null;setBusy(false);changed(true);S.dirty=false;updTitle();toast('Sitzung „'+(S.projName||sesName())+'“ wiederhergestellt')}catch(e){setBusy(false);toast('Wiederherstellen fehlgeschlagen: '+e.message)}}
+    S.sid=sid;S.projHandle=null;setBusy(false);changed(true);S.dirty=false;updTitle();
+    if(miss)toast(`Sitzung wiederhergestellt – aber ca. ${fmtShort(miss/SR/Math.max(1,d.tracks.reduce((n,t)=>n+t.ch.length,0)))} Audio fehlten im Browser-Speicher und wurden durch Stille ersetzt${guess?' (Länge geschätzt – Zeiten können verschoben sein)':''}. Bitte prüfen und als .aeproj sichern.`,12000);
+    else toast('Sitzung „'+(S.projName||sesName())+'“ wiederhergestellt')}catch(e){setBusy(false);toast('Wiederherstellen fehlgeschlagen: '+e.message)}}
 async function newProject(){if(!S.tracks.length)return;if(!await confirmBox('Neues Projekt?','Alle Spuren werden entfernt. Nicht exportierte Arbeit geht verloren.','Leeren'))return;stopAll();S.tracks=[];S.undo=[];S.redo=[];S.clip=null;S.noise=null;S.sel={a:0,b:0};S.marks=[];S.notes=[];S.subs=[];S.tsel=null;S.subPend=null;S.projName='';S.projHandle=null;S.focus=null;S.view={t0:0,pps:60};S.sid=null;changed(true)}
 
 /* ============================== UI-Allgemein ============================== */
@@ -1985,7 +2028,7 @@ function showHelp(){const K=(...k)=>k.map(x=>`<kbd>${x}</kbd>`).join(' '),row=(a
   modal(`<h3>Tastenkürzel &amp; Maus</h3><div class="keys">
   <h5>Wiedergabe &amp; Aufnahme</h5>${row('Abspielen / Stopp','Leertaste')}${row('Auswahl in Schleife','Shift+Leertaste')}${row('Pause / Fortsetzen','P')}${row('Aufnahme starten / beenden','R')}${row('Schleife an/aus','L')}${row('Zum Anfang / Ende','Pos1','Ende')}${row('Cursor ±1 s (Strg: ±10 s)','←','→')}${row('Auswahl erweitern','Shift+←','Shift+→')}${row('Spur wechseln (Shift: mehrere)','↑','↓')}${row('Stopp / Auswahl aufheben','Esc')}
   <h5>Bearbeiten</h5>${row('Rückgängig / Wiederholen','Strg+Z','Strg+Y')}${row('Ausschneiden / Kopieren / Einfügen','Strg+X','Strg+C','Strg+V')}${row('Löschen','Entf')}${row('Stille','Strg+L')}${row('Zuschneiden (Rest weg)','Strg+K')}${row('Duplizieren','Strg+D')}${row('Alles auswählen','Strg+A')}${row('Stumm / Solo','M','S')}${row('Letzten Effekt wiederholen','Strg+R')}${row('Spuren synchron (Sync)','Y')}${row('Neue leere Spur','N')}
-  <h5>Schnitt &amp; Hüllkurve</h5>${row('Schnitt (bei Auswahl: an beiden Rändern)','I','Strg+I')}${row('Passage verschieben (Anfang landet an der Marke, Platz wird gemacht)','Markieren, dann ziehen')}${row('Ohne Magnet platzieren','Shift beim Ziehen')}${row('Magnet an Schnitten anderer Spuren (blaue Linie)','Cursor, Auswahl, Schnitte und Passagen rasten ein')}${row('Passage in andere Spur / neue Spur','Auf andere Spur bzw. unter die letzte ziehen (ohne Sync)')}${row('Schnitt verschieben','Weiße Linie ziehen')}${row('Hüllkurven-Modus / zurücksetzen (mit Markierung nur dort)','H','Shift+H')}${row('Punkt setzen / verschieben','Klick / Ziehen')}${row('Punkt löschen','Doppelklick','Alt+Klick')}${row('Mehrere Punkte auswählen','Shift+Ziehen (Rechteck)','Shift+Klick')}${row('Ausgewählte Punkte verschieben / löschen','Ziehen','Entf')}${row('Alle Punkte der Spur auswählen','Strg+A (im Hüllkurven-Modus)')}${row('Ganze Auswahl lauter/leiser','In Auswahl hoch/runter ziehen')}
+  <h5>Schnitt &amp; Hüllkurve</h5>${row('Schnitt (bei Auswahl: an beiden Rändern)','I','Strg+I')}${row('Passage verschieben (Anfang landet an der Marke, Platz wird gemacht)','Markieren, dann ziehen')}${row('Ohne Magnet platzieren','Shift beim Ziehen')}${row('Magnet an Schnitten anderer Spuren (blaue Linie)','Cursor, Auswahl, Schnitte und Passagen rasten ein')}${row('Passage in andere Spur / neue Spur','Auf andere Spur bzw. unter die letzte ziehen (ohne Sync)')}${row('Schnitt verschieben','Weiße Linie ziehen')}${row('Hüllkurven-Modus / zurücksetzen (mit Markierung nur dort)','H','Shift+H')}${row('Punkt setzen / verschieben','Klick auf die Linie / Ziehen')}${row('Punkt löschen','Doppelklick','Alt+Klick')}${row('Mehrere Punkte auswählen','Neben der Linie ziehen (Rechteck)','Shift: dazu')}${row('Ausgewählte Punkte verschieben / löschen','Ziehen','Entf')}${row('Alle Punkte der Spur auswählen','Strg+A (im Hüllkurven-Modus)')}${row('Ganze Auswahl lauter/leiser','In Auswahl hoch/runter ziehen')}
   <h5>Projekt</h5>${row('Projekt speichern / unter …','Strg+S','Strg+Shift+S')}${row('Seitenleiste ein/aus','Tab')}
   <h5>Kapitel, Kommentare, Untertitel</h5>${row('Kapitel an Abspielposition (auch beim Abspielen)','B')}${row('Vorheriges / nächstes Kapitel',',','.')}${row('Kommentar (Auswahl oder am Cursor)','K')}${row('Untertitel (beim Abspielen: 1× Start, 2× Ende)','T')}${row('Ausgewählten Text löschen','Entf')}${row('In Textspur: Bereich anlegen / bearbeiten','Ziehen','Doppelklick')}${row('Textspur höher ziehen (mehrzeilig)','Unterkante ziehen')}${row('In Textspur suchen','Lupe')}
   <h5>Ansicht &amp; Datei</h5>${row('Vergrößern / Verkleinern','+','−')}${row('Alles einpassen','F')}${row('Auf Auswahl zoomen','Z')}${row('Importieren / Exportieren','Strg+O','Strg+E')}${row('Diese Hilfe','?')}
@@ -2016,7 +2059,7 @@ tracksEl.addEventListener('pointerdown',e=>{
   const tm=T(e),ti=S.tracks.indexOf(t),ctrl=e.ctrlKey||e.metaKey;let anchor=tm,mode='new';
   if(!S.envMode&&!e.shiftKey&&!ctrl&&editable()){const cn=cutNear(t,X(e));if(cn!=null){startCutDrag(t,cn,left,sx);return}}
   if(hasSel()&&t.sel&&!e.shiftKey){const xa=timeToX(S.sel.a),xb=timeToX(S.sel.b),x=X(e);if(Math.abs(x-xa)<=5){anchor=S.sel.b;mode='edge'}else if(Math.abs(x-xb)<=5){anchor=S.sel.a;mode='edge'}}
-  if(S.envMode&&!ctrl){envDown(e,t,tw);return}/* im Hüllkurven-Modus gehört auch Shift der Hüllkurve (Rechteck/Mehrfachauswahl) */
+  if(S.envMode&&!ctrl&&envDown(e,t,tw)!==false)return;/* im Hüllkurven-Modus gehört auch Shift der Hüllkurve (Rechteck/Mehrfachauswahl) */
   const yIn=e.clientY-tw.getBoundingClientRect().top,strip=t.cuts&&t.cuts.length&&yIn<14;
   if(mode==='new'&&!e.shiftKey&&!ctrl&&strip){const sg=segmentAt(t,tm);if(sg){if(!S.sync)S.tracks.forEach(x=>x.sel=x===t);else t.sel=true;setSel(sg[0],sg[1]);S.focus=t.id;updRows();invalidate();updUI();startMoveDrag(t,tw,left,sx,true,e.clientY);return}}
   if(mode==='new'&&!e.shiftKey&&!ctrl&&hasSel()&&(t.sel||S.sync)&&tm>S.sel.a&&tm<S.sel.b){startMoveDrag(t,tw,left,sx,false,e.clientY);return}
@@ -2047,7 +2090,8 @@ function startCutDrag(t,c,left,sx){const abs0=t.off+c;let moved=false;
   tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
 tracksEl.addEventListener('pointermove',e=>{if(e.buttons)return;const tw=e.target.closest('.tw');if(!tw)return;const t=byId(+tw.closest('.trk').dataset.id);if(!t)return;let c='text',tip='';
   const r=tw.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,tm=xToTime(x);
-  if(S.envMode){const p=envNear(t,x,y,r.height);c=p?'move':(hasSel()&&tm>S.sel.a&&tm<S.sel.b)?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:(hasSel()&&tm>S.sel.a&&tm<S.sel.b)?'Hoch/runter ziehen: ganze Auswahl lauter/leiser':'Klick: Hüllkurvenpunkt setzen'}
+  if(S.envMode){const p=envNear(t,x,y,r.height),lt=tm-t.off,onL=!p&&tLen(t)&&lt>=0&&lt<=tLen(t)/SR&&Math.abs(envY(envDbAt(t,lt),r.height)-y)<=7,inS=hasSel()&&tm>S.sel.a&&tm<S.sel.b;
+    c=p?'move':onL?'copy':inS?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:onL?'Klick auf die Linie: Punkt setzen und ziehen':inS?'Hoch/runter ziehen: ganze Auswahl lauter/leiser':'Ziehen: Punkte mit Rechteck auswählen'}
   else if(e.altKey)c='grab';
   else if(cutNear(t,x)!=null){c='col-resize';tip='Schnitt verschieben (ziehen) · Doppelklick daneben: Passage markieren'}
   else if(t.cuts&&t.cuts.length&&y<14){c='grab';tip='Klick: Passage markieren · Ziehen: Passage verschieben'}

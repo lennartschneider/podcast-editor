@@ -1,0 +1,5 @@
+# Zeilenenden je Plattform festlegen, damit die Startskripte überall laufen
+* text=auto
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf

@@ -1,0 +1,109 @@
+/* =====================================================================
+   Gemeinsames Design-System – Photo Editor · Audio Editor (· Qt-Tools via qt_theme.py)
+   Original: ../Design System/design-system.css (Ordner neben den Apps)
+   In den App-Ordnern liegt nur eine Kopie – die Start.bat holt beim Start die aktuelle Fassung.
+   Farben/Rundungen/Schrift NICHT hier ändern, sondern in tokens.json (build.py schreibt den :root-Block).
+   Diese Datei wird NACH dem App-eigenen <style> geladen und hat bei gemeinsamen Elementen das letzte Wort.
+   ===================================================================== */
+/* @tokens:start – automatisch aus tokens.json erzeugt, nicht von Hand ändern */
+:root{--ds-bg:#0f0f10;--ds-panel:#141415;--ds-panel2:#1c1c1e;--ds-surface:#18181a;--ds-field:#1a1a1c;--ds-field-hover:#202023;--ds-hover:#1f1f22;--ds-hover-strong:#242428;--ds-active:#26262a;--ds-active-strong:#2b2b30;--ds-line:#232326;--ds-line-strong:#2a2a2e;--ds-text:#e7e7ea;--ds-text-soft:#b9b9c0;--ds-text-muted:#8b8b93;--ds-text-dim:#74747c;--ds-text-faint:#5d5d65;--ds-primary:#f2f2f4;--ds-primary-hover:#ffffff;--ds-primary-text:#111111;--ds-accent:#3b82f6;--ds-accent-soft:#8ab4ff;--ds-success:#4ade80;--ds-warning:#f5b942;--ds-danger:#ff5d5d;--ds-danger-soft:#ff7b7b;--ds-danger-bg:#2a1717;--ds-overlay:#000000aa;--ds-r-pill:999px;--ds-r-menu:16px;--ds-r-modal:14px;--ds-r-card:14px;--ds-r-item:10px;--ds-r-small:6px;--ds-font:Inter, "Segoe UI", system-ui, sans-serif;--ds-font-qt:Segoe UI;--ds-mono:ui-monospace, Consolas, monospace;--ds-font-size:13px;--ds-font-small:11.5px;--ds-font-label:10.5px;--ds-shadow-menu:0 12px 32px #000a;--ds-shadow-modal:0 20px 60px #000a}
+/* @tokens:end */
+
+/* Kurznamen, die beide Apps in ihrem eigenen CSS verwenden */
+:root{color-scheme:dark;--bg:var(--ds-bg);--panel:var(--ds-panel);--panel2:var(--ds-panel2);--line:var(--ds-line);--txt:var(--ds-text);--dim:var(--ds-text-dim)}
+
+/* ---- Grundlage ---- */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--ds-bg);color:var(--ds-text);font:var(--ds-font-size)/1.4 var(--ds-font);-webkit-font-smoothing:antialiased;overflow:hidden;user-select:none}
+svg{shape-rendering:geometricPrecision}
+.ic{vertical-align:-2px;flex:none}
+
+/* ---- Buttons: Pille, transparent, beim Darüberfahren leicht hinterlegt ---- */
+button{font:inherit;color:var(--ds-text-soft);background:transparent;border:1px solid transparent;border-radius:var(--ds-r-pill);padding:6px 11px;cursor:pointer;transition:background .12s,color .12s}
+button:hover{background:var(--ds-hover);border-color:transparent;color:var(--ds-text)}
+button.on{background:var(--ds-active);border-color:transparent;color:#fff}
+button.primary{background:var(--ds-primary);border-color:transparent;color:var(--ds-primary-text);font-weight:600}
+button.primary:hover{background:var(--ds-primary-hover);color:#000}
+button.danger{background:transparent;color:var(--ds-danger-soft);border-color:transparent}
+button.danger:hover{background:var(--ds-danger-bg)}
+button:disabled{opacity:.35;cursor:default}
+button:disabled:hover{background:transparent;color:var(--ds-text-soft)}
+button.primary:disabled:hover{background:var(--ds-primary);color:var(--ds-primary-text)}
+/* Symbol-Button (Werkzeugleiste) */
+.ib{display:flex;align-items:center;gap:6px;padding:6px 9px;background:var(--ds-field)}
+.ib:hover{background:var(--ds-hover-strong)}
+.ib.primary{background:var(--ds-primary)}
+.ib.primary:hover{background:var(--ds-primary-hover)}
+
+/* ---- Eingabefelder ---- */
+input,select,textarea{font:inherit;color:var(--ds-text-soft);background:var(--ds-field);border:1px solid transparent;border-radius:var(--ds-r-pill);padding:5px 10px;outline:none}
+textarea{border-radius:var(--ds-r-item)}
+select:hover,input:hover,textarea:hover{background:var(--ds-field-hover)}
+input[type=range]{padding:0;accent-color:var(--ds-text);background:none;border:0;height:14px;border-radius:0;margin:0}
+input[type=checkbox],input[type=radio]{accent-color:var(--ds-text);margin:0}
+kbd{background:transparent;border:1px solid #2e2e33;border-radius:4px;padding:0 4px;font:var(--ds-font-label) var(--ds-mono);color:#8d8d96;white-space:nowrap}
+
+/* ---- Kopfleiste, Segment-Schalter ---- */
+#top{background:var(--ds-bg);border-bottom:1px solid var(--ds-line);padding:7px 10px;gap:5px}
+#top .sp{flex:1}
+.seg,.chips{display:flex;background:var(--ds-panel2);border-radius:var(--ds-r-pill);padding:3px;gap:2px}
+.seg button,.chips button{display:flex;align-items:center;border-radius:var(--ds-r-pill);color:#9a9aa2}
+.seg button.on,.chips button.on{background:var(--ds-active-strong);color:#fff}
+
+/* ---- Seitenleiste & Abschnitte ---- */
+#side{background:var(--ds-panel);border-left:1px solid var(--ds-line);overflow-y:auto;min-height:0}
+.sec{padding:14px 16px 8px;border-bottom:0}
+.sec h4{margin:0 0 10px;font-size:var(--ds-font-label);letter-spacing:.12em;text-transform:uppercase;color:var(--ds-text-faint);font-weight:600;display:flex;align-items:center;gap:6px}
+.sl label{color:var(--ds-text-muted)}
+.sl output{text-align:right;color:#9d9da5;font-size:12px;font-variant-numeric:tabular-nums}
+.hint{color:var(--ds-text-dim);font-size:var(--ds-font-small);line-height:1.5}
+
+/* ---- Startbildschirm ---- */
+#welcome h1{margin:0;color:var(--ds-text);font-weight:600}
+#welcome button{border-radius:var(--ds-r-pill)}
+
+/* ---- Fußleiste, Fortschritt ---- */
+#foot{background:var(--ds-bg);border-top:1px solid var(--ds-line);color:var(--ds-text-faint);font-size:var(--ds-font-small);padding:5px 14px}
+.bar{height:6px;border-radius:4px;background:var(--ds-panel2);overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--ds-text)}
+
+/* ---- Menüs (Dropdown, Kontextmenü) ---- */
+.ddm,#ctx{background:var(--ds-surface);border:1px solid var(--ds-line-strong);border-radius:var(--ds-r-menu);padding:6px;box-shadow:var(--ds-shadow-menu)}
+.ddm button,#ctx button{border-radius:var(--ds-r-item)}
+.ddm hr,#ctx hr{border:0;border-top:1px solid var(--ds-line-strong);margin:6px 4px}
+
+/* ---- Dialog ---- */
+#modal{position:fixed;inset:0;background:var(--ds-overlay);display:none;align-items:center;justify-content:center;z-index:50}
+#modal.on{display:flex}
+#modal .box{background:var(--ds-surface);border:1px solid #262629;border-radius:var(--ds-r-modal);padding:18px 20px;width:min(560px,92vw);max-height:92vh;overflow:auto;box-shadow:var(--ds-shadow-modal)}
+#modal h3{margin:0 0 12px}
+#modal .fld{margin:12px 0}
+#modal .fld>label{display:block;color:var(--ds-text-dim);font-size:12px;margin-bottom:5px}
+#modal .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+#modal .opts{display:flex;gap:14px;flex-wrap:wrap}
+#modal .opts label{display:flex;gap:6px;align-items:center;color:var(--ds-text);cursor:pointer}
+#modal input[type=text],#modal input[type=number]{width:100%}
+
+/* ---- Hinweis-Meldung ---- */
+#toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:#1c1c1ee6;border:0;border-radius:var(--ds-r-item);padding:8px 14px;display:none;z-index:60;max-width:80vw;text-align:center}
+
+/* ---- Auswahllisten: aufgeklappte Liste als abgerundetes Menü (design-system.js) ---- */
+select.ds-open{background:var(--ds-field-hover)}
+.ds-dd{position:fixed;z-index:90;background:var(--ds-surface);border:1px solid var(--ds-line-strong);border-radius:var(--ds-r-menu);padding:6px;box-shadow:var(--ds-shadow-menu);overflow:auto;display:flex;flex-direction:column;gap:1px}
+.ds-dd button{display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;border:0;border-radius:var(--ds-r-item);background:transparent;color:var(--ds-text-soft);font:inherit;font-size:var(--ds-font-size);text-align:left;white-space:nowrap;cursor:pointer}
+.ds-dd button.hi{background:var(--ds-hover-strong);color:var(--ds-text)}
+.ds-dd button.on{color:var(--ds-text)}.ds-dd button.on::after{content:'✓';margin-left:auto;padding-left:16px;color:var(--ds-accent-soft)}
+.ds-dd button:disabled{color:var(--ds-text-faint);cursor:default}
+.ds-dd button.ing{padding-left:20px}.ds-dd .grp{font-size:var(--ds-font-label);letter-spacing:.08em;text-transform:uppercase;color:var(--ds-text-faint);padding:8px 12px 3px}
+
+/* ---- Hover-Infos (Elemente mit data-tip): Erklärung in einfacher Sprache + Empfehlung ---- */
+.ds-tip{position:fixed;z-index:80;max-width:300px;background:var(--ds-surface);border:1px solid var(--ds-line-strong);border-radius:var(--ds-r-item);padding:9px 12px;box-shadow:var(--ds-shadow-menu);
+  color:var(--ds-text-soft);font-size:12px;line-height:1.5;pointer-events:none;opacity:0;transform:translateY(-2px);transition:opacity .12s,transform .12s;left:-9999px;top:0}
+.ds-tip.on{opacity:1;transform:none}
+.ds-tip .rec{display:block;margin-top:6px;color:var(--ds-text)}.ds-tip .rec b{color:var(--ds-accent-soft);font-weight:600}
+.ds-tip .def{display:block;margin-top:4px;color:var(--ds-text-dim);font-size:var(--ds-font-small)}
+
+/* ---- Scrollbalken ---- */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--ds-active);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}

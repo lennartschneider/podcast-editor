@@ -1,0 +1,27 @@
+# Eigene Aufnahmen, Projekte und Backups nie hochladen
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.opus
+*.aiff
+*.aif
+*.aeproj
+*.aerezept
+*.aup3
+*.aup3-wal
+*.aup3-shm
+*.srt
+*.vtt
+Backups/
+Backup*/
+
+# System- und Editor-Dateien
+.DS_Store
+Thumbs.db
+desktop.ini
+__pycache__/
+.vscode/
+.idea/

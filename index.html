@@ -167,9 +167,8 @@ body.sideoff #side{display:none}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
 #hidList{max-height:42vh;overflow:auto;margin:0 -4px;padding:0 4px;scrollbar-width:thin}
 #secTr .trTop{display:flex;gap:4px;align-items:center;margin:0 0 6px}#trQ{flex:1;min-width:0;margin:0}
-#trEmo{display:flex;gap:1px;flex-wrap:wrap;justify-content:flex-end;max-width:55%}#trEmo:empty{display:none}
-#trEmo button{background:none;border:0;min-width:0;height:26px;padding:0 5px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:2px;opacity:.7;filter:grayscale(.5)}
-#trEmo button:hover{background:#26262a;opacity:1;filter:none}#trEmo button.on{background:#1c2a3f;box-shadow:inset 0 0 0 1px #8ab4ff66;opacity:1;filter:none}#trEmo button sub{font-size:9.5px;color:#8b8b93;font-variant-numeric:tabular-nums}
+#trF{flex:none;display:flex;align-items:center;gap:4px;height:32px;min-width:32px;padding:0 9px;border-radius:999px;color:#8b8b93;white-space:nowrap}
+#trF:hover{color:#e7e7ea}#trF.on{background:#1c2a3f;color:#c4d8ff;box-shadow:inset 0 0 0 1px #8ab4ff66}#trF .ic{width:14px;height:14px}#trF .fe{font-size:13px;line-height:1}
 #trList{max-height:48vh;overflow:auto;margin:0 -6px;padding:0 6px;scrollbar-width:thin;overscroll-behavior:contain}
 #trList .trl{padding:5px 8px 6px 10px;border-radius:8px;border-left:2px solid var(--sc,#3a3a40);margin:2px 0}
 #trList .trl:hover{background:#1a1a1c}
@@ -345,7 +344,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
         <div class="hint" id="textCounts"></div>
         <div class="chipsrow" style="margin-top:6px"><button id="mCopy" title="Kapitel als Zeitstempel-Liste für Shownotes / YouTube kopieren">Kapitel kopieren</button><button id="tImport" title="SRT, VTT, Audacity-Marken oder Zeitstempel-Liste">Importieren …</button><button id="tExport" title="SRT, VTT, Podcasting-2.0-JSON, Audacity-Marken">Exportieren …</button></div></div>
       <div class="sec" id="secTr"><h4>Transkript <span class="r" id="trCount"></span></h4>
-        <div class="trTop"><input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off"><div id="trEmo"></div></div>
+        <div class="trTop"><input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off"><button id="trF" style="display:none"></button></div>
         <div id="trList"></div></div>
       <div class="sec"><h4>Effekte <span class="r">wirken auf die Auswahl · <kbd>Strg+R</kbd> wiederholt</span></h4><div class="fx" id="fxList"></div></div>
       <div class="sec" id="secLog"><h4>Protokoll &amp; Rezepte</h4>
@@ -451,6 +450,7 @@ const I={
  filt:SV('<path d="M4 2v12M8 2v12M12 2v12" stroke-opacity=".5"/><path d="M2.5 10h3M6.5 5h3M10.5 8.5h3"/>'),/* EQ-Schieber */
  gate:SV('<path d="M1.5 8h1.5l1-3.5 1.2 7 1.2-5 .9 1.5H9"/><path d="M10.5 3.5v9"/><path d="M12.5 8h2" stroke-opacity=".55"/>'),
  xgate:SV('<path d="M1.5 5h2.5l1-2.5 1.2 5 1.2-4 1 1.5h6"/><path d="M1.5 11.5h3M11.5 11.5h3"/><path d="M6 9.5v4M10 9.5v4"/>'),
+ filter:SV('<path d="M2.5 3.5h11l-4.2 5v4.2l-2.6 1.3V8.5z"/>'),/* Trichter */
  pen:SV('<path d="M10.8 2.8l2.4 2.4-7.4 7.4-3 .6.6-3z"/><path d="M9.3 4.3l2.4 2.4"/>'),
  trash:SV('<path d="M2.5 4.5h11M6.3 4.5V3h3.4v1.5"/><path d="M4 4.5l.7 8.5h6.6l.7-8.5"/><path d="M6.8 7v3.8M9.2 7v3.8"/>'),/* Mülleimer */
  umm:SV('<path d="M2.5 3.5h11v7.2H7.2L4.3 13v-2.3H2.5z"/><path d="M6.3 5.6l3.4 3M9.7 5.6l-3.4 3"/>'),/* Sprechblase mit X */
@@ -542,6 +542,13 @@ function remapCuts(t,off0,f,drop){const n=tLen(t)/SR;
   if(t.clr&&t.clr.length){const r=[];for(const q of t.clr){const a=clamp(f(off0+q.a)-t.off,0,n),b=clamp(f(off0+q.b)-t.off,0,n);if(b-a>1e-3)r.push({a,b,c:q.c})}t.clr=clrNorm(r)}
   if(t.cuts&&t.cuts.length){const r=[];for(const x of t.cuts){const v=f(off0+x)-t.off;if(v>.001&&v<n-.001&&!r.some(y=>Math.abs(y-v)<.002))r.push(v)}t.cuts=r.sort((p,q)=>p-q)}
   if(t.env&&t.env.length){const r=[];for(const p of t.env){const ab=off0+p.t;if(drop&&drop(ab))continue;const v=f(ab)-t.off;if(v>=-.001&&v<=n+.001)r.push({...p,t:v})}t.env=r.sort((p,q)=>p.t-q.t)}}
+/* Hüllkurve beim Herausschneiden erhalten: links bleibt der Verlauf bis zum Schnitt, rechts der Verlauf ab dem Schnitt.
+   Vorher messen → envKeep(t,a,b); nach removeTime() die zurückgegebene Funktion aufrufen (tag = Kennung, z. B. für Ausblenden). */
+function envKeep(t,a,b){const e=t.env;if(!e||!e.length)return null;const L=x=>envDbAt(t,x-t.off),pr=[L(a-.25),L(a),L(b),L(b+.25)];
+  return tag=>{const E=t.env||[];if(!E.length)return;const len=tLen(t)/SR,c=a-t.off;if(c<-1e-6||c>len+1e-6)return;
+    const now=[envDbAt(t,c-.25),envDbAt(t,c-.001),envDbAt(t,c),envDbAt(t,c+.25)];if(now.every((v,i)=>Math.abs(v-pr[i])<.05))return;/* nichts verändert */
+    const tg=tag?{hf:tag}:{},add=[];if(c>.002)add.push({t:c-.001,db:pr[1],...tg});if(c<len-.001)add.push({t:c,db:pr[2],...tg});
+    t.env=E.filter(q=>!(q.t>c-.0015&&q.t<c+.0005)).concat(add).sort((x,y)=>x.t-y.t)}}
 function removeTime(t,a,b,raw){const n=tLen(t),off0=t.off;const i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1>i0)t.ch=spliceCh(t.ch,i0,i1,null);if(a<t.off)t.off-=Math.min(b,t.off)-a;if(!raw)remapCuts(t,off0,x=>x<=a?x:x>=b?x-(b-a):a,x=>x>a+1e-9&&x<b-1e-9)}
 function insertSilence(t,at,len,raw){const n=tLen(t),off0=t.off;if(!n||len<=0)return;if(at<=t.off+1e-9)t.off+=len/SR;else{const p=Math.round((at-t.off)*SR);if(p>=n)return;t.ch=spliceCh(t.ch,p,p,t.ch.map(()=>Seq.zeros(len)))}if(!raw)remapCuts(t,off0,x=>x>at+1e-9?x+len/SR:x)}
 function insertAt(t,at,chs,raw){const n=tLen(t),off0=t.off,L=chs[0].length/SR;if(!n){t.off=at;t.ch=chs.map(sq);return}chs=matchCh(chs,t.ch.length);const p=Math.round((at-t.off)*SR);
@@ -1338,7 +1345,7 @@ async function truncSync(ts,p){/* gemeinsame Pausen aller ausgewählten Spuren f
   setBusy(true,'Suche Pausen …',true);await paintPause();let cuts;try{cuts=await silenceCutsAsync(ts.flatMap(t=>t.ch.map(s=>({s,st:Math.round((t.off-A)*SR)}))),n,p)}catch(e){if(e.cancelled){setBusy(false);return toast('Stille kürzen abgebrochen – nichts geändert')}throw e}finally{setBusy(false)}
   if(!cuts.length)return toast('Keine passenden Pausen gefunden');
   pushUndo('Stille kürzen');logOp(syncSet(ts),{k:'trunc',p:{...p},r:hasSel()?[S.sel.a,S.sel.b]:null});const sum=cuts.reduce((s,[a,b])=>s+b-a,0);
-  for(const t of syncSet(ts))for(let k=cuts.length-1;k>=0;k--)removeTime(t,A+cuts[k][0]/SR,A+cuts[k][1]/SR);
+  for(const t of syncSet(ts))for(let k=cuts.length-1;k>=0;k--){const x=A+cuts[k][0]/SR,y=A+cuts[k][1]/SR,keep=envKeep(t,x,y);removeTime(t,x,y);if(keep)keep()}
   for(let k=cuts.length-1;k>=0;k--)shiftTextDel(A+cuts[k][0]/SR,A+cuts[k][1]/SR);
   if(hasSel())S.sel.b-=sum/SR;S.lastFx='trunc';changed(true);toast(`${cuts.length} Pausen gekürzt · ${nf(sum/SR,1)} s gespart${S.sync?' (alle Spuren synchron)':''}`)}
 async function previewFx(id){const fx=FXM[id];if(S.busy||R.on)return;const ts=targets();if(!ts)return;if(fx.preview)return fx.preview(ts,fxParams(fx));const t=ts[0],p=fxParams(fx);let[i0,i1]=fxRange(t,fx,p);
@@ -1502,7 +1509,7 @@ function trRanges(s,q){const tx=s.text||'',n=tx.length,R=[];if(!n)return R;const
   for(const nt of S.notes){if(nt.b<=s.a||nt.a>=s.b)continue;let c0=c(Math.max(nt.a,s.a)),c1=c(Math.min(nt.b,s.b));
     while(c0>0&&!/\s/.test(tx[c0-1]))c0--;while(c1<n&&!/\s/.test(tx[c1]))c1++;if(c1<=c0)c1=Math.min(n,c0+1);R.push({c0,c1,nt,last:nt.b<=s.b+1e-6})}
   if(q){const lo=tx.toLowerCase();let i=lo.indexOf(q);while(i>=0){R.push({c0:i,c1:i+q.length,hit:true});i=lo.indexOf(q,i+q.length)}}return R}
-const noteEmo=t=>{const m=(t||'').match(/^\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic})*/u);return m?m[0]:'💬'};
+const noteEmo=t=>((t||'').match(EMO_RE)||['💬'])[0];/* erstes Emoji irgendwo im Kommentar */
 function trText(s,q){const tx=s.text||'',R=trRanges(s,q),cut=new Set([0,tx.length]);for(const r of R){cut.add(r.c0);cut.add(r.c1)}const pts=[...cut].sort((a,b)=>a-b),out=[];
   for(let k=0;k+1<pts.length;k++){const a=pts[k],b=pts[k+1];if(b<=a)continue;const cov=R.filter(r=>r.c0<=a&&r.c1>=b),nts=cov.filter(r=>r.nt),sp=el('span',(nts.length?'nt ':'')+(cov.some(r=>r.hit)?'hit':''));
     sp.textContent=tx.slice(a,b);sp.dataset.o=a;if(nts.length){sp.dataset.nid=nts[0].nt.id;sp.dataset.tip=nts.map(r=>esc(r.nt.text||'(leerer Kommentar)')).join('<br>')+'<span class="def">Klick: Kommentar bearbeiten</span>'}out.push(sp);
@@ -1511,24 +1518,32 @@ function trText(s,q){const tx=s.text||'',R=trRanges(s,q),cut=new Set([0,tx.lengt
 /* Schnell-Emojis je Zeile (♥️ ✂️ 💡 bevorzugt) – Klick markiert den ganzen Untertitel, nochmal Klick entfernt */
 const trQuick=()=>{const want=['♥️','✂️','💡'].filter(m=>EMO.includes(m));return (want.length?want:EMO.slice(0,3))};
 const trNoteFor=(x,m)=>S.notes.find(n=>n.text===m&&Math.abs(n.a-x.a)<.01&&Math.abs(n.b-x.b)<.01);
-let TRF=null;/* Emoji-Filter */
+let TRF=null;/* Emoji-Filter (Schlüssel ohne Variationszeichen, damit ♥ und ♥️ gleich zählen) */
+const EMO_RE=/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*/gu,emoKey=m=>m.replace(/\uFE0F/g,'');
 function renderTranscript(force){const box=$('#trList');if(!box)return;const q=($('#trQ').value||'').trim().toLowerCase(),subs=S.subs,multi=trMulti();
   const sig=(TRF||'')+q+'#'+subs.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+S.notes.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+(multi?subs.map(x=>{const t=subSpeaker(x);return t?t.id+t.color+t.name:'-'}).join(','):'');
   if(!force&&sig===trSig)return;const sl=getSelection();if(!force&&sl&&!sl.isCollapsed&&box.contains(sl.anchorNode))return;/* nicht während markiert wird */
   trSig=sig;const st=box.scrollTop;box.innerHTML='';trCurId=null;let hits=0;
-  if(!subs.length){$('#trCount').textContent='';$('#trQ').style.display='none';$('#trEmo').innerHTML='';TRF=null;box.innerHTML='<div class="hint none">Noch keine Untertitel. Über „Importieren …“ (Kapitel &amp; Text) eine SRT- oder VTT-Datei laden – z. B. das Transkript aus Riverside. Dann steht hier der ganze Text: mitlesen, springen, Stellen markieren und kommentieren.</div>';return}
+  if(!subs.length){$('#trCount').textContent='';$('#trQ').style.display='none';$('#trF').style.display='none';TRF=null;box.innerHTML='<div class="hint none">Noch keine Untertitel. Über „Importieren …“ (Kapitel &amp; Text) eine SRT- oder VTT-Datei laden – z. B. das Transkript aus Riverside. Dann steht hier der ganze Text: mitlesen, springen, Stellen markieren und kommentieren.</div>';return}
   $('#trQ').style.display='';let prev=null;
   /* Emojis, die im Transkript vorkommen (je Zeile gezählt) → Filterknöpfe neben der Suche */
-  const emoOf=x=>new Set(S.notes.filter(n=>n.b>x.a&&n.a<x.b).map(n=>noteEmo(n.text))),cnt=new Map();for(const x of subs)for(const m of emoOf(x))cnt.set(m,(cnt.get(m)||0)+1);
-  if(TRF&&!cnt.has(TRF))TRF=null;const fe=$('#trEmo');fe.innerHTML='';const order=[...EMO,'💬'];
-  for(const[m,c]of[...cnt].sort((a,b)=>((order.indexOf(a[0])+99)%99)-((order.indexOf(b[0])+99)%99))){const b=el('button',TRF===m?'on':'',`${esc(m)}<sub>${c}</sub>`);b.dataset.tip=TRF===m?'Filter aufheben':`Nur Zeilen mit <b>${esc(m)}</b> zeigen (${c})`;b.onclick=()=>{TRF=TRF===m?null:m;renderTranscript(true)};fe.append(b)}
-  for(const x of subs){if(q&&!(x.text||'').toLowerCase().includes(q))continue;if(TRF&&!emoOf(x).has(TRF))continue;hits++;const sp=multi?subSpeaker(x):null,r=el('div','trl');r.dataset.id=x.id;if(sp)r.style.setProperty('--sc',sp.color);
+  /* Emojis je Zeile: aus Kommentaren (alle Emojis im Text, ohne Emoji = 💬) und aus dem Untertiteltext selbst */
+  const EMO_SHOW=new Map(),emoOf=x=>{const out=new Set(),add=str=>{let any=false;for(const m of (str||'').match(EMO_RE)||[]){const k=emoKey(m);if(!EMO_SHOW.has(k))EMO_SHOW.set(k,m);out.add(k);any=true}return any};
+    for(const n of S.notes)if(n.b>x.a&&n.a<x.b&&!add(n.text)){out.add('💬');EMO_SHOW.set('💬','💬')}add(x.text);return out},cnt=new Map(),per=new Map();
+  for(const x of subs){const e=emoOf(x);per.set(x.id,e);for(const m of e)cnt.set(m,(cnt.get(m)||0)+1)}
+  if(TRF&&!cnt.has(TRF))TRF=null;const fb=$('#trF');fb.classList.toggle('on',!!TRF);fb.style.display=cnt.size?'':'none';fb.innerHTML=I.filter+(TRF?`<span class="fe">${esc(EMO_SHOW.get(TRF)||TRF)}</span>`:'');
+  fb.dataset.tip=TRF?`Gefiltert: nur Zeilen mit <b>${esc(EMO_SHOW.get(TRF)||TRF)}</b> – klicken zum Ändern`:'Nach Emoji filtern';
+  const order=[...EMO,'💬'].map(emoKey),rank=k=>{const i=order.indexOf(k);return i<0?99:i};
+  fb.onclick=e=>{e.stopPropagation();const r=fb.getBoundingClientRect(),items=[[`${TRF?'':'✓ '}Alle Zeilen`,()=>{TRF=null;renderTranscript(true)}],'-'];
+    for(const[k,c]of[...cnt].sort((a,b)=>rank(a[0])-rank(b[0])||b[1]-a[1]))items.push([`${TRF===k?'✓ ':''}${esc(EMO_SHOW.get(k)||k)}&nbsp;&nbsp;${c} ${c===1?'Zeile':'Zeilen'}`,()=>{TRF=k;renderTranscript(true)}]);
+    ctxMenu(r.left,r.bottom+4,items)};
+  for(const x of subs){if(q&&!(x.text||'').toLowerCase().includes(q))continue;if(TRF&&!per.get(x.id).has(TRF))continue;hits++;const sp=multi?subSpeaker(x):null,r=el('div','trl');r.dataset.id=x.id;if(sp)r.style.setProperty('--sc',sp.color);
     const showSp=sp&&(q||!prev||prev!==sp.id);prev=sp?sp.id:null;
     const qe=trQuick().map(m=>`<span class="qb${trNoteFor(x,m)?' on':''}" data-emo="${esc(m)}">${esc(m)}</span>`).join('');
     r.innerHTML=`<div class="trm"><span class="tm">${fmtChap(x.a)}</span>${showSp?`<span class="sp" style="color:${sp.color}">${esc(sp.name)}</span>`:''}<span class="qe">${qe}</span><span class="ed">${I.pen}</span></div><div class="tt"></div>`;
     for(const b of r.querySelectorAll('.qb'))b.dataset.tip=b.classList.contains('on')?`<b>${b.dataset.emo}</b> entfernen`:`Ganze Zeile als <b>${b.dataset.emo}</b> markieren`;
     $('.tm',r).dataset.tip='Hierhin springen';$('.ed',r).dataset.tip='Text bearbeiten';$('.tt',r).append(...trText(x,q));box.append(r)}
-  $('#trCount').textContent=q||TRF?`${hits} ${TRF&&!q?(hits===1?'Zeile':'Zeilen')+' mit '+TRF:'Treffer'}`:`${subs.length} Zeilen`;
+  $('#trCount').textContent=q||TRF?`${hits} ${TRF&&!q?(hits===1?'Zeile':'Zeilen')+' mit '+(EMO_SHOW.get(TRF)||TRF):'Treffer'}`:`${subs.length} Zeilen`;
   if(!hits&&(q||TRF))box.innerHTML='<div class="hint none">Keine passenden Zeilen.</div>';box.scrollTop=st;trCur(pos(),true)}
 function trCur(p,quiet){const box=$('#trList');if(!box||!S.subs.length)return;let lo=0,hi=S.subs.length-1,f=null;while(lo<=hi){const m=(lo+hi)>>1,x=S.subs[m];if(x.a<=p+1e-6){f=x;lo=m+1}else hi=m-1}
   const id=f&&p<f.b+.05?f.id:null;if(id===trCurId)return;trCurId=id;for(const r of box.querySelectorAll('.trl.cur'))r.classList.remove('cur');if(id==null)return;
@@ -1643,7 +1658,7 @@ function opCopy(silent){const ts=targets();if(!ts)return false;if(!hasSel()){toa
   S.clip=ts.map(t=>{const[i0,i1]=trackRange(t);return t.ch.map(s=>s.sub(i0,i1))}).filter(c=>c[0].length);if(!S.clip.length){S.clip=null;toast('Bereich ist leer');return false}
   if(silent!==true)toast('Kopiert · '+nf(S.sel.b-S.sel.a,2)+' s');updUI();return true}
 function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');stopAll();pushUndo(typeof label==='string'?label:'Löschen');
-  const{a,b}=S.sel;logOp(syncSet(ts),{k:'del',a,b});for(const t of syncSet(ts))removeTime(t,a,b);shiftTextDel(a,b);setSel(a,a);changed()}
+  const{a,b}=S.sel;logOp(syncSet(ts),{k:'del',a,b});for(const t of syncSet(ts)){const keep=envKeep(t,a,b);removeTime(t,a,b);if(keep)keep()}shiftTextDel(a,b);setSel(a,a);changed()}
 /* ============ Ausblenden: Passage herausnehmen, aber mit der Spur aufbewahren (zurückholbar) ============
    t.hid=[{gid,at,len,seg,clr,env,txt}] – at = Stelle relativ zum Spuranfang. gid verbindet die Teile mehrerer Spuren (Sync).
    txt = ausgeblendete Kapitel/Kommentare/Untertitel (relativ zum Beginn der Passage). */
@@ -1658,11 +1673,11 @@ function hideRange(set,a,b,tag,fade){const gid='h'+Date.now().toString(36)+(HIDN
   let L=0;for(const t of set){if(!(a<tEnd(t)&&b>t.off)){if(t.off>=b){logOp([t],{k:'del',a,b});removeTime(t,a,b)}continue}
     const n=tLen(t),i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1<=i0)continue;
     const la=i0/SR,lb=i1/SR,seg=t.ch.map(s=>s.sub(i0,i1)),pcs=aPieces(clrAbs(t),t.off+la,t.off+lb,null),env=(t.env||[]).filter(q=>q.t>=la-1e-6&&q.t<=lb+1e-6).map(q=>({t:q.t-la,db:q.db}));
-    logOp([t],{k:'del',a,b});removeTime(t,a,b);
+    const keep=envKeep(t,a,b);logOp([t],{k:'del',a,b});removeTime(t,a,b);if(keep)keep(gid);
     /* Blende: vor dem Schnitt aus-, danach einblenden (Hüllkurvenpunkte mit Kennung hf; überdeckte Punkte merken → beim Zurückholen wiederherstellen) */
     let efx=null;if(fade>0){const len=tLen(t)/SR,lc=clamp(a-t.off,0,len),pre=Math.max(0,lc-fade),post=Math.min(len,lc+fade),e=t.env||[],inR=q=>q.t>pre+1e-6&&q.t<post-1e-6;
       const add=[{t:lc,db:ENV_MIN,hf:gid}];if(lc>1e-3)add.push({t:pre,db:envDbAt(t,pre),hf:gid});if(lc<len-1e-3)add.push({t:post,db:envDbAt(t,post),hf:gid});
-      efx=e.filter(inR).map(q=>({...q,t:q.t-lc}));t.env=e.filter(q=>!inR(q)).concat(add).sort((x,y)=>x.t-y.t)}
+      efx=e.filter(q=>inR(q)&&q.hf!==gid).map(q=>({...q,t:q.t-lc}));t.env=e.filter(q=>!inR(q)).concat(add).sort((x,y)=>x.t-y.t)}
     t.hid=(t.hid||[]).concat([{gid,at:Math.round(la*1e4)/1e4,len:(i1-i0)/SR,seg,clr:pcs,env,txt,...(tag?{tag}:{}),...(efx?{efx}:{})}]).sort((x,y)=>x.at-y.at);L=Math.max(L,(i1-i0)/SR)}
   for(const k of TKEYS)S[k]=S[k].filter(it=>!(it.a>=a-1e-6&&it.b<=b+1e-6));shiftTextDel(a,b);return L}
 const hidParts=gid=>S.tracks.map(t=>[t,(t.hid||[]).find(h=>h.gid===gid)]).filter(x=>x[1]);
@@ -1671,7 +1686,7 @@ function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!par
 function restoreHidCore(parts){let P=null,L=0,txt=null;
   for(const[t,h]of parts){const at=t.off+h.at,off0=t.off,dAbs=clrAbs(t),NL=h.seg[0].length;if(P==null){P=at;txt=h.txt}L=Math.max(L,h.len);
     t.hid=t.hid.filter(x=>x!==h);logOp([t],{k:'paste',a:at,b:at,len:Math.round(h.len*1e4)/1e4});
-    if(h.efx){const l0=at-t.off;t.env=(t.env||[]).filter(q=>q.hf!==h.gid).concat(h.efx.map(q=>({...q,t:q.t+l0}))).sort((x,y)=>x.t-y.t)}
+    {const l0=at-t.off;t.env=(t.env||[]).filter(q=>q.hf!==h.gid).concat((h.efx||[]).map(q=>({...q,t:q.t+l0}))).sort((x,y)=>x.t-y.t)}/* Halte-/Blendpunkte dieser Passage weg, überdeckte Punkte zurück */
     insertAt(t,at,h.seg,true);remapCuts(t,off0,x=>x>at+1e-9?x+NL/SR:x);clrFromAbs(t,aIns(dAbs,at,NL/SR,h.clr));
     if(h.env&&h.env.length){const l0=at-t.off;t.env=(t.env||[]).concat(h.env.map(q=>({t:q.t+l0,db:q.db}))).sort((x,y)=>x.t-y.t)}
     const len=tLen(t)/SR,c=(t.cuts||[]).slice();for(const p of[at,at+NL/SR]){const l=p-t.off;if(l>.001&&l<len-.001&&!c.some(x=>Math.abs(x-l)<.002))c.push(l)}t.cuts=c.sort((x,y)=>x-y)}

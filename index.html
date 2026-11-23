@@ -147,6 +147,7 @@ body.trkdrag,body.trkdrag *{cursor:grabbing!important;user-select:none}
 #recent .foot{font-size:11px;color:var(--ds-text-faint);margin:8px 12px 0}
 body.sideoff #main{grid-template-columns:minmax(0,1fr) 0}
 body.sideoff #side{display:none}
+#sideRz{position:absolute;top:0;bottom:0;right:calc(var(--sw) - 3px);width:7px;cursor:col-resize;z-index:15}#sideRz::after{content:'';position:absolute;top:0;bottom:0;left:3px;width:1px;background:transparent;transition:background .12s}#sideRz:hover::after,#sideRz.on::after{background:#5b8def;width:2px}body.sideoff #sideRz{display:none}
 #bSide.on{background:#26262a;color:#fff}
 .sec h4{cursor:pointer;user-select:none}
 .sec h4:hover{color:#8b8b93}
@@ -165,7 +166,10 @@ body.sideoff #side{display:none}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
 #hidList{max-height:42vh;overflow:auto;margin:0 -4px;padding:0 4px;scrollbar-width:thin}
-#trQ{width:100%;margin:0 0 6px}
+#secTr .trTop{display:flex;gap:4px;align-items:center;margin:0 0 6px}#trQ{flex:1;min-width:0;margin:0}
+#trEmo{display:flex;gap:1px;flex-wrap:wrap;justify-content:flex-end;max-width:55%}#trEmo:empty{display:none}
+#trEmo button{background:none;border:0;min-width:0;height:26px;padding:0 5px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:2px;opacity:.7;filter:grayscale(.5)}
+#trEmo button:hover{background:#26262a;opacity:1;filter:none}#trEmo button.on{background:#1c2a3f;box-shadow:inset 0 0 0 1px #8ab4ff66;opacity:1;filter:none}#trEmo button sub{font-size:9.5px;color:#8b8b93;font-variant-numeric:tabular-nums}
 #trList{max-height:48vh;overflow:auto;margin:0 -6px;padding:0 6px;scrollbar-width:thin;overscroll-behavior:contain}
 #trList .trl{padding:5px 8px 6px 10px;border-radius:8px;border-left:2px solid var(--sc,#3a3a40);margin:2px 0}
 #trList .trl:hover{background:#1a1a1c}
@@ -173,7 +177,9 @@ body.sideoff #side{display:none}
 #trList .trm{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#66666e;margin-bottom:1px;user-select:none}
 #trList .trm .tm{cursor:pointer;font-variant-numeric:tabular-nums}#trList .trm .tm:hover{color:#e7e7ea}
 #trList .trm .sp{font-weight:600;letter-spacing:.02em}
-#trList .trm .ed{margin-left:auto;opacity:0;cursor:pointer;display:flex;padding:1px 3px;border-radius:6px}#trList .trl:hover .ed{opacity:.75}#trList .trm .ed:hover{background:#26262a;opacity:1}#trList .trm .ed .ic{width:12px;height:12px}
+#trList .trm .qe{margin-left:auto;display:flex;gap:1px;opacity:0}#trList .trl:hover .qe,#trList .trl.cur .qe{opacity:1}
+#trList .qb{cursor:pointer;font-size:12px;line-height:1;padding:2px 3px;border-radius:6px;filter:grayscale(.6);opacity:.65}#trList .qb:hover{background:#26262a;filter:none;opacity:1}#trList .qb.on{filter:none;opacity:1;background:#1c2a3f}
+#trList .trm .ed{opacity:0;cursor:pointer;display:flex;padding:1px 3px;border-radius:6px}#trList .trl:hover .ed{opacity:.75}#trList .trm .ed:hover{background:#26262a;opacity:1}#trList .trm .ed .ic{width:12px;height:12px}
 #trList .tt{font-size:13px;line-height:1.5;color:#d4d4d8;user-select:text;cursor:text;white-space:pre-wrap;word-break:break-word}
 #trList .tt ::selection{background:#5b8def66}
 #trList .nt{background:#1c2a3f;color:#dbe6ff;border-radius:3px;box-shadow:0 0 0 1px #8ab4ff55;cursor:pointer}
@@ -329,7 +335,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
       <div id="mvIns"><span></span></div><div id="mvBox"></div><div id="snapLn"></div>
       <div id="ted"><div class="tl"><i></i><span></span></div><div class="emo"></div><textarea rows="2"></textarea><div class="hint">Enter speichern · Shift+Enter neue Zeile · Esc abbrechen</div></div>
     </div>
-    <aside id="side">
+    <div id="sideRz"></div><aside id="side">
       <div class="sec"><h4>Auswahl</h4><div class="selg" id="selInfo"></div></div>
       <div class="sec"><h4>Bearbeiten</h4><div class="chipsrow" id="editChips"></div></div>
       <div class="sec" id="secHid" style="display:none"><h4>Ausgeblendete Passagen <span class="r" id="hidCount"></span></h4><div id="hidList"></div></div>
@@ -339,7 +345,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
         <div class="hint" id="textCounts"></div>
         <div class="chipsrow" style="margin-top:6px"><button id="mCopy" title="Kapitel als Zeitstempel-Liste für Shownotes / YouTube kopieren">Kapitel kopieren</button><button id="tImport" title="SRT, VTT, Audacity-Marken oder Zeitstempel-Liste">Importieren …</button><button id="tExport" title="SRT, VTT, Podcasting-2.0-JSON, Audacity-Marken">Exportieren …</button></div></div>
       <div class="sec" id="secTr"><h4>Transkript <span class="r" id="trCount"></span></h4>
-        <input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off">
+        <div class="trTop"><input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off"><div id="trEmo"></div></div>
         <div id="trList"></div></div>
       <div class="sec"><h4>Effekte <span class="r">wirken auf die Auswahl · <kbd>Strg+R</kbd> wiederholt</span></h4><div class="fx" id="fxList"></div></div>
       <div class="sec" id="secLog"><h4>Protokoll &amp; Rezepte</h4>
@@ -1502,17 +1508,28 @@ function trText(s,q){const tx=s.text||'',R=trRanges(s,q),cut=new Set([0,tx.lengt
     sp.textContent=tx.slice(a,b);sp.dataset.o=a;if(nts.length){sp.dataset.nid=nts[0].nt.id;sp.dataset.tip=nts.map(r=>esc(r.nt.text||'(leerer Kommentar)')).join('<br>')+'<span class="def">Klick: Kommentar bearbeiten</span>'}out.push(sp);
     for(const r of nts)if(r.last&&r.c1===b){const e=el('span','ne',noteEmo(r.nt.text));e.dataset.nid=r.nt.id;e.dataset.tip=esc(r.nt.text||'(leerer Kommentar)')+'<span class="def">Klick: bearbeiten</span>';out.push(e)}}
   return out}
+/* Schnell-Emojis je Zeile (♥️ ✂️ 💡 bevorzugt) – Klick markiert den ganzen Untertitel, nochmal Klick entfernt */
+const trQuick=()=>{const want=['♥️','✂️','💡'].filter(m=>EMO.includes(m));return (want.length?want:EMO.slice(0,3))};
+const trNoteFor=(x,m)=>S.notes.find(n=>n.text===m&&Math.abs(n.a-x.a)<.01&&Math.abs(n.b-x.b)<.01);
+let TRF=null;/* Emoji-Filter */
 function renderTranscript(force){const box=$('#trList');if(!box)return;const q=($('#trQ').value||'').trim().toLowerCase(),subs=S.subs,multi=trMulti();
-  const sig=q+'#'+subs.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+S.notes.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+(multi?subs.map(x=>{const t=subSpeaker(x);return t?t.id+t.color+t.name:'-'}).join(','):'');
+  const sig=(TRF||'')+q+'#'+subs.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+S.notes.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+(multi?subs.map(x=>{const t=subSpeaker(x);return t?t.id+t.color+t.name:'-'}).join(','):'');
   if(!force&&sig===trSig)return;const sl=getSelection();if(!force&&sl&&!sl.isCollapsed&&box.contains(sl.anchorNode))return;/* nicht während markiert wird */
   trSig=sig;const st=box.scrollTop;box.innerHTML='';trCurId=null;let hits=0;
-  if(!subs.length){$('#trCount').textContent='';$('#trQ').style.display='none';box.innerHTML='<div class="hint none">Noch keine Untertitel. Über „Importieren …“ (Kapitel &amp; Text) eine SRT- oder VTT-Datei laden – z. B. das Transkript aus Riverside. Dann steht hier der ganze Text: mitlesen, springen, Stellen markieren und kommentieren.</div>';return}
+  if(!subs.length){$('#trCount').textContent='';$('#trQ').style.display='none';$('#trEmo').innerHTML='';TRF=null;box.innerHTML='<div class="hint none">Noch keine Untertitel. Über „Importieren …“ (Kapitel &amp; Text) eine SRT- oder VTT-Datei laden – z. B. das Transkript aus Riverside. Dann steht hier der ganze Text: mitlesen, springen, Stellen markieren und kommentieren.</div>';return}
   $('#trQ').style.display='';let prev=null;
-  for(const x of subs){if(q&&!(x.text||'').toLowerCase().includes(q))continue;hits++;const sp=multi?subSpeaker(x):null,r=el('div','trl');r.dataset.id=x.id;if(sp)r.style.setProperty('--sc',sp.color);
+  /* Emojis, die im Transkript vorkommen (je Zeile gezählt) → Filterknöpfe neben der Suche */
+  const emoOf=x=>new Set(S.notes.filter(n=>n.b>x.a&&n.a<x.b).map(n=>noteEmo(n.text))),cnt=new Map();for(const x of subs)for(const m of emoOf(x))cnt.set(m,(cnt.get(m)||0)+1);
+  if(TRF&&!cnt.has(TRF))TRF=null;const fe=$('#trEmo');fe.innerHTML='';const order=[...EMO,'💬'];
+  for(const[m,c]of[...cnt].sort((a,b)=>((order.indexOf(a[0])+99)%99)-((order.indexOf(b[0])+99)%99))){const b=el('button',TRF===m?'on':'',`${esc(m)}<sub>${c}</sub>`);b.dataset.tip=TRF===m?'Filter aufheben':`Nur Zeilen mit <b>${esc(m)}</b> zeigen (${c})`;b.onclick=()=>{TRF=TRF===m?null:m;renderTranscript(true)};fe.append(b)}
+  for(const x of subs){if(q&&!(x.text||'').toLowerCase().includes(q))continue;if(TRF&&!emoOf(x).has(TRF))continue;hits++;const sp=multi?subSpeaker(x):null,r=el('div','trl');r.dataset.id=x.id;if(sp)r.style.setProperty('--sc',sp.color);
     const showSp=sp&&(q||!prev||prev!==sp.id);prev=sp?sp.id:null;
-    r.innerHTML=`<div class="trm"><span class="tm">${fmtChap(x.a)}</span>${showSp?`<span class="sp" style="color:${sp.color}">${esc(sp.name)}</span>`:''}<span class="ed">${I.pen}</span></div><div class="tt"></div>`;
+    const qe=trQuick().map(m=>`<span class="qb${trNoteFor(x,m)?' on':''}" data-emo="${esc(m)}">${esc(m)}</span>`).join('');
+    r.innerHTML=`<div class="trm"><span class="tm">${fmtChap(x.a)}</span>${showSp?`<span class="sp" style="color:${sp.color}">${esc(sp.name)}</span>`:''}<span class="qe">${qe}</span><span class="ed">${I.pen}</span></div><div class="tt"></div>`;
+    for(const b of r.querySelectorAll('.qb'))b.dataset.tip=b.classList.contains('on')?`<b>${b.dataset.emo}</b> entfernen`:`Ganze Zeile als <b>${b.dataset.emo}</b> markieren`;
     $('.tm',r).dataset.tip='Hierhin springen';$('.ed',r).dataset.tip='Text bearbeiten';$('.tt',r).append(...trText(x,q));box.append(r)}
-  $('#trCount').textContent=q?`${hits} Treffer`:`${subs.length} Zeilen`;box.scrollTop=st;trCur(pos(),true)}
+  $('#trCount').textContent=q||TRF?`${hits} ${TRF&&!q?(hits===1?'Zeile':'Zeilen')+' mit '+TRF:'Treffer'}`:`${subs.length} Zeilen`;
+  if(!hits&&(q||TRF))box.innerHTML='<div class="hint none">Keine passenden Zeilen.</div>';box.scrollTop=st;trCur(pos(),true)}
 function trCur(p,quiet){const box=$('#trList');if(!box||!S.subs.length)return;let lo=0,hi=S.subs.length-1,f=null;while(lo<=hi){const m=(lo+hi)>>1,x=S.subs[m];if(x.a<=p+1e-6){f=x;lo=m+1}else hi=m-1}
   const id=f&&p<f.b+.05?f.id:null;if(id===trCurId)return;trCurId=id;for(const r of box.querySelectorAll('.trl.cur'))r.classList.remove('cur');if(id==null)return;
   const r=box.querySelector(`.trl[data-id="${id}"]`);if(!r)return;r.classList.add('cur');
@@ -1545,6 +1562,7 @@ function initTranscript(){const box=$('#trList'),q=$('#trQ');if(!box)return;if(!
   box.addEventListener('click',e=>{const row=e.target.closest('.trl');if(!row)return;const x=S.subs.find(z=>z.id===+row.dataset.id);if(!x)return;
     const nid=e.target.closest('[data-nid]');if(nid&&!trHasSel()){const nt=S.notes.find(z=>z.id===+nid.dataset.nid);if(nt){ensureVisible(nt.a);moveCur(nt.a);startEdit('notes',nt)}return}
     if(e.target.closest('.ed')){ensureVisible(x.a);startEdit('subs',x);return}
+    const qb=e.target.closest('.qb');if(qb){const m=qb.dataset.emo,ex=trNoteFor(x,m);if(ex){delText('notes',ex.id);toast(`${m} entfernt`,1800)}else trComment({a:x.a,b:x.b},m);return}
     if(trHasSel())return;moveCur(x.a);trCur(x.a,true)});
   document.addEventListener('selectionchange',()=>{clearTimeout(trBar.t);trBar.t=setTimeout(trBar,120)});
   box.addEventListener('scroll',()=>{if($('#trBar').classList.contains('on'))trBar()});
@@ -2570,6 +2588,13 @@ tedTA().addEventListener('blur',()=>setTimeout(()=>{if(ED&&document.activeElemen
 (()=>{const miss=[];if(!window.showDirectoryPicker)miss.push('automatische Sicherung in einen Ordner');if(!window.showSaveFilePicker)miss.push('der „Speichern unter“-Dialog (Dateien landen im Download-Ordner)');if(!(window.AudioContext&&AudioContext.prototype.setSinkId))miss.push('die Wahl des Ausgabegeräts');if(miss.length&&!lsGet('browserHint',false)){lsSet('browserHint',true);setTimeout(()=>toast('Hinweis: In diesem Browser fehlen '+miss.join(', ')+'. Alles andere funktioniert – für den vollen Umfang Chrome oder Edge verwenden.',10000),1500)}})();
 renderLanes();buildFx();renderEmo();initTranscript();refreshDevices().then(()=>{if(cfg.outDev)setOutput(cfg.outDev,true)});
 new ResizeObserver(()=>{clampView();invalidate()}).observe($('#center'));
+/* Seitenleiste per Ziehen am linken Rand verbreitern (Doppelklick = Standardbreite) */
+(()=>{const rz=$('#sideRz');if(!rz)return;const SW0=300,lim=w=>clamp(Math.round(w),260,Math.max(260,Math.min(760,innerWidth*.6))),set=w=>document.documentElement.style.setProperty('--sw',lim(w)+'px');
+  const sv=lsGet('sw',0);if(sv)set(sv);rz.dataset.tip='Ziehen: Seitenleiste breiter oder schmaler · Doppelklick: Standardbreite';
+  rz.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();rz.setPointerCapture(e.pointerId);rz.classList.add('on');document.body.style.cursor='col-resize';const R=$('#main').getBoundingClientRect();
+    const mv=ev=>set(R.right-ev.clientX),up=()=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up);rz.removeEventListener('pointercancel',up);rz.classList.remove('on');document.body.style.cursor='';lsSet('sw',parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sw')))};
+    rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);rz.addEventListener('pointercancel',up)});
+  rz.addEventListener('dblclick',()=>{set(SW0);lsSet('sw',SW0)});addEventListener('resize',()=>{const v=lsGet('sw',0);if(v)set(v)})})();
 renderTracks();updTransport();updUI();requestAnimationFrame(meterLoop);checkRestore();updMon();S.dirty=false;updTitle();bkInit();
 </script>
 </body>

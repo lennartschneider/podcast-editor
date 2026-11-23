@@ -1615,7 +1615,7 @@ function envDbAt(t,lt){const e=t.env;if(!e||!e.length)return 0;if(lt<=e[0].t)ret
 const envAt=(t,lt)=>(t.env&&t.env.length)?envGain(envDbAt(t,lt)):1;
 /* Abstand zum Spurrand, damit Punkte ganz oben/unten (z. B. „stumm“) gut greifbar bleiben */
 /* Halbe Hüllkurve: reicht nur bis zur Mittellinie (stumm = Nulllinie der Wellenform). Lokal (localhost) Standard, online volle Höhe */
-let ENVMID=lsGet('envMid',/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
+let ENVMID=lsGet('envMid',true);/* Hüllkurve nur bis zur Mittellinie – überall Standard */
 const ENV_PT=8,ENV_PB=14,envH=h=>Math.max(10,ENVMID?h/2-ENV_PT:h-ENV_PT-ENV_PB);
 const envY=(db,h)=>ENV_PT+envH(h)*(1-(clamp(db,ENV_MIN,ENV_MAX)-ENV_MIN)/(ENV_MAX-ENV_MIN));
 function envDb(y,h){let v=(1-(y-ENV_PT)/envH(h))*(ENV_MAX-ENV_MIN)+ENV_MIN;if(Math.abs(v)<.8)v=0;return Math.round(clamp(v,ENV_MIN,ENV_MAX)*10)/10}

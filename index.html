@@ -1412,7 +1412,9 @@ const envGain=db=>db<=ENV_MIN+.01?0:db2lin(db);
 function envDbAt(t,lt){const e=t.env;if(!e||!e.length)return 0;if(lt<=e[0].t)return e[0].db;const L=e[e.length-1];if(lt>=L.t)return L.db;let lo=0,hi=e.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(e[m].t<=lt)lo=m;else hi=m}const p=e[lo],q=e[hi];return p.db+(q.db-p.db)*(lt-p.t)/Math.max(1e-9,q.t-p.t)}
 const envAt=(t,lt)=>(t.env&&t.env.length)?envGain(envDbAt(t,lt)):1;
 /* Abstand zum Spurrand, damit Punkte ganz oben/unten (z. B. „stumm“) gut greifbar bleiben */
-const ENV_PT=8,ENV_PB=14,envH=h=>Math.max(10,h-ENV_PT-ENV_PB);
+/* Halbe Hüllkurve: reicht nur bis zur Mittellinie (stumm = Nulllinie der Wellenform). Lokal (localhost) Standard, online volle Höhe */
+let ENVMID=lsGet('envMid',/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname));
+const ENV_PT=8,ENV_PB=14,envH=h=>Math.max(10,ENVMID?h/2-ENV_PT:h-ENV_PT-ENV_PB);
 const envY=(db,h)=>ENV_PT+envH(h)*(1-(clamp(db,ENV_MIN,ENV_MAX)-ENV_MIN)/(ENV_MAX-ENV_MIN));
 function envDb(y,h){let v=(1-(y-ENV_PT)/envH(h))*(ENV_MAX-ENV_MIN)+ENV_MIN;if(Math.abs(v)<.8)v=0;return Math.round(clamp(v,ENV_MIN,ENV_MAX)*10)/10}
 function schedEnv(param,t,ls,cs,dur){const e=t.env;if(!e||!e.length){param.value=1;return}const T=lt=>cs+(lt-ls),lt0=Math.max(ls,0),end=ls+dur;
@@ -2099,10 +2101,12 @@ function startCutDrag(t,c,left,sx){const abs0=t.off+c;let moved=false;
   const up=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);document.body.classList.remove('cutdrag');setStatus('Bereit');showSnap(null);
     if(moved){const[g0,gi]=group[0];logOp(group.map(g=>g[0]),{k:'cutmv',from:abs0,to:g0.off+g0.cuts[gi]});changed();return}const tm=Math.max(0,xToTime(sx-left));S.tracks.forEach(x=>x.sel=x===t);S.focus=t.id;setSel(tm,tm);updRows();invalidate();updUI()};
   tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
+/* Mauszeiger „Plus“ über der Hüllkurven-Linie (Klick = Punkt setzen) */
+const CUR_PLUS='url("data:image/svg+xml,'+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18'><path d='M9 3v12M3 9h12' stroke='#000' stroke-width='4.5' stroke-linecap='round'/><path d='M9 3v12M3 9h12' stroke='#fff' stroke-width='2' stroke-linecap='round'/></svg>")+'") 9 9, copy';
 tracksEl.addEventListener('pointermove',e=>{if(e.buttons)return;const tw=e.target.closest('.tw');if(!tw)return;const t=byId(+tw.closest('.trk').dataset.id);if(!t)return;let c='text',tip='';
   const r=tw.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,tm=xToTime(x);
   if(S.envMode){const p=envNear(t,x,y,r.height),lt=tm-t.off,onL=!p&&tLen(t)&&lt>=0&&lt<=tLen(t)/SR&&Math.abs(envY(envDbAt(t,lt),r.height)-y)<=7,inS=hasSel()&&tm>S.sel.a&&tm<S.sel.b;
-    c=p?'move':onL?'ns-resize':inS?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:onL?'Linie ziehen: Stück zwischen zwei Punkten hoch/runter · Klicken: Punkt setzen':inS?'Hoch/runter ziehen: ganze Auswahl lauter/leiser':'Ziehen: Punkte mit Rechteck auswählen'}
+    c=p?'move':onL?CUR_PLUS:inS?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:onL?'Linie ziehen: Stück zwischen zwei Punkten hoch/runter · Klicken: Punkt setzen':inS?'Hoch/runter ziehen: ganze Auswahl lauter/leiser':'Ziehen: Punkte mit Rechteck auswählen'}
   else if(e.altKey)c='grab';
   else if(cutNear(t,x)!=null){c='col-resize';tip='Schnitt verschieben (ziehen) · Doppelklick daneben: Passage markieren'}
   else if(t.cuts&&t.cuts.length&&y<14){c='grab';tip='Klick: Passage markieren · Ziehen: Passage verschieben'}

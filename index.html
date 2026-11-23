@@ -655,12 +655,22 @@ function updRows(){for(const t of S.tracks){const r=ROWS.get(t.id);if(!r)continu
   r.info.textContent=(t.ch.length>1?'Stereo':'Mono')+' · '+fmtShort(tLen(t)/SR);updLufs(t,r)}}
 /* Normalisieren-Knopf im Spurkopf: ganze Spur auf Podcast-Lautheit (Stereo −16, Mono −19 LUFS), Spitzen weich begrenzt */
 async function normTrack(t){if(!editable()||!tLen(t))return;const sel0={...S.sel},p0={...fxParams(FXM.norm)},target=t.ch.length>1?-16:-19;
-  S.tracks.forEach(x=>x.sel=x===t);S.focus=t.id;S.sel={a:0,b:0};Object.assign(FXP.norm,{mode:'lufs',lufs:target,lim:true,dc:true});
+  /* angezeigt wird Audio + Hüllkurve + Regler → das Audio so normalisieren, dass die ANZEIGE auf dem Ziel landet */
+  const E=await lufsEAsync(t),raw=lufsFromE(t,E,false),withEnv=lufsFromE(t,E,true);if(!isFinite(withEnv))return toast('Die Spur ist (durch die Hüllkurve) komplett stumm');
+  const want=target-(withEnv-raw)-t.vol;if(want>-6)return toast(`Ziel nicht erreichbar: Die Hüllkurve senkt die Spur um ${nf(raw-withEnv,1)} dB ab – erst die Hüllkurve anheben oder zurücksetzen`,6000);
+  const aim=Math.max(-40,want);
+  S.tracks.forEach(x=>x.sel=x===t);S.focus=t.id;S.sel={a:0,b:0};Object.assign(FXP.norm,{mode:'lufs',lufs:aim,lim:true,dc:true});
   try{await applyFx('norm')}finally{Object.assign(FXP.norm,p0);if(sel0.b-sel0.a>1e-4)S.sel=sel0;updRows();invalidate();updUI()}}
 /* Lautheit je Spur (integriert, BS.1770) – im Hintergrund gemessen, einmal je Audiostand (Seq ist unveränderlich) */
-const LU_TIP='Lautheit dieser Spur – so laut, wie sie sich insgesamt anfühlt (LUFS, inklusive Lautstärke-Regler, ohne Hüllkurve). Die weiße Marke ist der Gesamtwert, der Balken zeigt beim Abspielen den aktuellen Pegel. Empfehlung: Sprache im blauen Bereich, also etwa −19 bis −16 LUFS. Zu leise oder zu laut? „Normalisieren → Lautheit“.',LUC=new WeakMap(),luX=v=>clamp((v+40)/34,0,1);/* Skala −40 … −6 LUFS */
-function trackLufs(t){const a=t.ch[0];if(!a||!tLen(t))return null;let m=LUC.get(a);if(m)return m.v;m={v:undefined};LUC.set(a,m);const step=Math.round(SR*.1);
-  kEnergyAsync(t.ch,step,0,tLen(t)).then(E=>{m.v=E.length>=4?gateL(E,step):-Infinity;updRows()},()=>{m.v=null});return undefined}
+const LU_TIP='Lautheit dieser Spur – so laut, wie sie sich insgesamt anfühlt (LUFS, inklusive Lautstärke-Regler und Hüllkurve). Die weiße Marke ist der Gesamtwert, der Balken zeigt beim Abspielen den aktuellen Pegel. Empfehlung: Sprache im blauen Bereich, also etwa −19 bis −16 LUFS. Zu leise oder zu laut? „Normalisieren → Lautheit“.',LUC=new WeakMap(),luX=v=>clamp((v+40)/34,0,1);/* Skala −40 … −6 LUFS */
+/* Energie je 100-ms-Block einmal pro Audiostand messen (im Hintergrund); die Hüllkurve wird bei jeder Anzeige darübergerechnet – billig, auch live beim Ziehen */
+function lufsE(t){const a=t.ch[0];if(!a||!tLen(t))return null;let m=LUC.get(a);if(m)return m.E;m={E:undefined};LUC.set(a,m);
+  kEnergyAsync(t.ch,Math.round(SR*.1),0,tLen(t)).then(E=>{m.E=E;updRows()},()=>{m.E=null;LUC.delete(a)});return undefined}
+async function lufsEAsync(t){const a=t.ch[0],m=LUC.get(a);if(m&&m.E)return m.E;const E=await kEnergyAsync(t.ch,Math.round(SR*.1),0,tLen(t));LUC.set(a,{E});return E}
+function lufsFromE(t,E,withEnv){const step=Math.round(SR*.1);if(!E||E.length<4)return -Infinity;if(!withEnv||!(t.env&&t.env.length))return gateL(E,step);
+  const W=new Float64Array(E.length);for(let j=0;j<E.length;j++){const g=envAt(t,(j+.5)*step/SR);W[j]=E[j]*g*g}return gateL(W,step)}
+function trackLufs(t){const E=lufsE(t);if(E===undefined)return undefined;if(E==null)return null;return lufsFromE(t,E,true)}
+let lufsRaf=0;function lufsSoon(t){if(lufsRaf)return;lufsRaf=requestAnimationFrame(()=>{lufsRaf=0;const r=ROWS.get(t.id);if(r)updLufs(t,r)})}/* live beim Ziehen der Hüllkurve */
 function updLufs(t,r){if(!r.lt)return;r.lt.parentElement.dataset.tip=LU_TIP;const L=trackLufs(t);if(L===undefined){r.lt.textContent='misst …';r.lm.style.display='none';return}
   if(L==null||!isFinite(L)){r.lt.textContent='– LUFS';r.lm.style.display='none';r.lt.className='lt';return}const v=L+t.vol;
   r.lt.textContent=(v<0?'−':'')+nf(Math.abs(v),1)+' LUFS';r.lm.style.display='block';r.lm.style.left=(luX(v)*100)+'%';const out=v>-16+.3||v<-19-.3;r.lt.className='lt'+(out?' out':'');r.lm.classList.toggle('out',out);/* rot: außerhalb des Podcast-Bereichs −19 … −16 LUFS */
@@ -962,7 +972,7 @@ function gateInfo(st,thr,auto){if(!st.ok)return '<span class="warn">Zu wenig Ton
     (st.gap<15?'<br><span class="warn">Sprache ist kaum lauter als der Hintergrund – erst „Rauschreduzierung“ anwenden, sonst greift die Sperre schlecht.</span>':'')}
 
 /* ============================== Effekte ============================== */
-const CURVES=[['s','Weich (S-Kurve)'],['lin','Linear'],['db','Logarithmisch']];
+const CURVES=[['db','Linear (Lautstärke)'],['lin','Linear (Signal)'],['s','Weich (S-Kurve)']];/* db = gleichmäßig in dB (wie man hört), lin = gleichmäßig in der Signalhöhe */
 const FDEF={hp:80,lp:9000,ls:150,hs:6000,pk:3000};
 const ENH={leicht:{red:9,thr:-22,ratio:2,pres:1.5,air:1,mud:-1.5},mittel:{red:13,thr:-24,ratio:3,pres:2.5,air:1.5,mud:-2.5},stark:{red:18,thr:-28,ratio:4.5,pres:3.5,air:2,mud:-3.5}};
 const FX=[
@@ -1037,9 +1047,9 @@ const FX=[
  info(ts){const pk=Math.max(...ts.map(t=>{const[i0,i1]=trackRange(t);return memo(t,'pk',i0,i1,()=>Math.max(...t.ch.map(s=>rangePeak(s,i0,i1))))}));return `Spitze: <b>${fmtDb(lin2db(pk))} dBFS</b> · max. ohne Übersteuern: <b>${fmtDb(-lin2db(pk))} dB</b><br>${scopeTxt(ts)}`},
  prepare(ts,p){const pk=Math.max(...ts.map(t=>{const[i0,i1]=trackRange(t);return Math.max(...t.ch.map(s=>rangePeak(s,i0,i1)))}));let g=p.gain;if(!p.clip&&pk>0&&lin2db(pk)+g>0){g=-lin2db(pk);toast(`Auf ${fmtDb(g)} dB begrenzt (kein Übersteuern)`)}return{g:db2lin(g)}},
  run(seg,p,c){seg.forEach(a=>scale(a,c.g));return seg}},
-{id:'fin',name:'Einblenden',icon:'fin',params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'s'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'}],
+{id:'fin',name:'Einblenden',icon:'fin',envFade:true,params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'db'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
  info:ts=>hasSel()?scopeTxt(ts):`Ohne Auswahl: erste <b>${nf(FXP.fin.dur,1)} s</b> · ${ts.length} ${ts.length===1?'Spur':'Spuren'}`,run(seg,p){fade(seg,p.curve,true);return seg}},
-{id:'fout',name:'Ausblenden',icon:'fout',params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'s'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'}],
+{id:'fout',name:'Ausblenden',icon:'fout',envFade:true,params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'db'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
  info:ts=>hasSel()?scopeTxt(ts):`Ohne Auswahl: letzte <b>${nf(FXP.fout.dur,1)} s</b> · ${ts.length} ${ts.length===1?'Spur':'Spuren'}`,run(seg,p){fade(seg,p.curve,false);return seg}},
 {id:'comp',name:'Kompressor',icon:'comp',desc:'Gleicht laute und leise Stellen aus – ideal für Sprache.',
  params:[{k:'thr',l:'Schwelle',min:-60,max:0,step:1,def:-20,u:'dB'},{k:'ratio',l:'Verhältnis',min:1,max:20,step:.1,def:3,u:':1'},{k:'att',l:'Attack',min:.1,max:100,step:.1,def:5,u:'ms'},{k:'rel',l:'Release',min:10,max:1000,step:5,def:150,u:'ms'},{k:'knee',l:'Knie',min:0,max:24,step:1,def:6,u:'dB'},{k:'norm',l:'Danach normalisieren (−1 dB)',type:'chk',def:true}],
@@ -1097,10 +1107,12 @@ const TIPS={
  'amp.gain':['Plus = lauter, Minus = leiser. +6 dB klingt deutlich lauter, +10 dB etwa doppelt so laut.','Kleine Schritte: ±1 bis ±6 dB.'],
  'amp.clip':['Erlaubt, dass Spitzen über das Maximum gehen – das verzerrt hörbar.','Aus.'],
  fin:['Lässt den Ton am Anfang langsam lauter werden, statt abrupt einzusetzen.','Musik 2–5 s, Sprache 0,3–1 s.'],
- 'fin.curve':['Wie die Lautstärke verläuft. Weich klingt am natürlichsten, Linear gleichmäßig, Logarithmisch bleibt länger leise.','Weich (S-Kurve).'],
+ 'fin.curve':['Wie die Lautstärke ansteigt. Linear (Lautstärke): steigt so gleichmäßig an, wie man es hört – in der Hüllkurve eine gerade Linie. Linear (Signal): die klassische Blende vieler Schnittprogramme – wird am Anfang schnell hörbar, das letzte Stück dauert länger. Weich: beginnt und endet sanft.','Linear (Lautstärke) – Standard. Für Musik klingt Weich oft natürlicher.'],
+ 'fin.env':['Das Audio bleibt unverändert: Die Blende wird als Punkte auf die Hüllkurve gesetzt. Länge oder Verlauf kannst du später im Hüllkurven-Modus (H) anpassen. Außerhalb der Markierung bleibt alles gleich laut.','An.'],
  'fin.dur':['Länge der Blende, wenn nichts markiert ist. Mit Markierung gilt die markierte Länge.','Musik 2–5 s, Sprache 0,3–1 s.'],
  fout:['Lässt den Ton am Ende langsam leiser werden, statt abrupt aufzuhören.','Musik 3–6 s, Sprache 0,5–1 s.'],
- 'fout.curve':['Wie die Lautstärke verläuft. Weich klingt am natürlichsten, Linear gleichmäßig, Logarithmisch wird schnell leise.','Weich (S-Kurve).'],
+ 'fout.curve':['Wie die Lautstärke abfällt. Linear (Lautstärke): wird so gleichmäßig leiser, wie man es hört – in der Hüllkurve eine gerade Linie. Linear (Signal): die klassische Blende vieler Schnittprogramme – bleibt lange laut und verschwindet erst am Ende. Weich: beginnt und endet sanft.','Linear (Lautstärke) – Standard. Für Musik klingt Weich oft natürlicher.'],
+ 'fout.env':['Das Audio bleibt unverändert: Die Blende wird als Punkte auf die Hüllkurve gesetzt. Länge oder Verlauf kannst du später im Hüllkurven-Modus (H) anpassen. Außerhalb der Markierung bleibt alles gleich laut.','An.'],
  'fout.dur':['Länge der Blende, wenn nichts markiert ist. Mit Markierung gilt die markierte Länge.','Musik 3–6 s, Sprache 0,5–1 s.'],
  comp:['Gleicht laute und leise Stellen an: Alles über der Schwelle wird gebremst. So kann man das Ganze danach lauter machen, ohne dass Spitzen stören.','Für Sprache ist „Sprache optimieren“ meist einfacher.'],
  'comp.thr':['Ab welcher Lautstärke gebremst wird. Niedriger = es wird öfter eingegriffen.','−24 bis −16 dB für Sprache.'],
@@ -1128,6 +1140,7 @@ function memoAsync(t,kind,i0,i1,afn){const a=t.ch[0];let m=MEMO.get(a);if(!m){m=
   if(m.has(k)){const v=m.get(k);return v&&v.pending?null:v}m.set(k,{pending:true});afn().then(v=>{m.set(k,v);updFxInfo()},()=>m.delete(k));return null}
 const FXP=lsGet('fxp',{});
 /* Standardwerte geändert (Nov 2026): gespeicherte ALTE Standardwerte einmalig auf die neuen setzen – selbst gewählte Werte bleiben */
+if(!lsGet('fxpMig3',false)){for(const id of['fin','fout'])if(FXP[id]&&(FXP[id].curve==='s'||FXP[id].curve==='lin'))FXP[id].curve='db';lsSet('fxp',FXP);lsSet('fxpMig3',true)}/* neuer Standard: Linear (Lautstärke) */
 if(!lsGet('fxpMig1',false)){const M={gate:{hold:[200,250],rel:[120,150]},xgate:{hold:[250,300],rel:[150,180]}};for(const id in M)for(const k in M[id])if(FXP[id]&&FXP[id][k]===M[id][k][0])FXP[id][k]=M[id][k][1];lsSet('fxp',FXP);lsSet('fxpMig1',true)}
 function fxParams(fx){const p=FXP[fx.id]||(FXP[fx.id]={});for(const d of fx.params)if(p[d.k]===undefined)p[d.k]=d.def;return p}
 function fmtParam(d,v){if(d.fmt)return d.fmt(v);if(d.log)return v>=1000?nf(v/1000,v>=10000?0:1)+' kHz':Math.round(v)+' Hz';const dec=d.step>=1?0:d.step>=.1?1:2;return (d.min<0&&v>0?'+':'')+nf(v,dec)+(d.u?(d.u.startsWith(':')?'':' ')+d.u:'')}
@@ -1515,13 +1528,25 @@ function envDown(e,t,tw){if(!tLen(t))return;const r=tw.getBoundingClientRect(),H
       if(!seg){if(!t.env.length){t.env.push({t:0,db:0},{t:len,db:0});pa=t.env[0];pb=t.env[1]}seg=[pa,pb].filter(Boolean).map(q=>[q,q.db]);moved=true}
       const dd=Math.round(-(ev.clientY-sy)/envH(H)*(ENV_MAX-ENV_MIN)*(ev.shiftKey?.25:1)*10)/10;for(const[q,d]of seg)q.db=clamp(Math.round((d+dd)*10)/10,ENV_MIN,ENV_MAX);
       setStatus(`Linienstück ${dd>=0?'+':''}${nf(dd,1)} dB · Shift: fein`);invalidateTrack(t)}}
+  const mvL=ev=>{mv(ev);lufsSoon(t)};/* Lautheitsanzeige live mitführen */
   tracksEl.setPointerCapture(e.pointerId);
-  const up=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);setStatus('Bereit');if(!moved){if(clickAdd){clickAdd();envChanged(t);return}S.undo.pop();S.envDrag=null;invalidate();return}envChanged(t)};
-  tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
+  const up=()=>{tracksEl.removeEventListener('pointermove',mvL);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);setStatus('Bereit');if(!moved){if(clickAdd){clickAdd();envChanged(t);return}S.undo.pop();S.envDrag=null;invalidate();return}envChanged(t)};
+  tracksEl.addEventListener('pointermove',mvL);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
 function toggleEnv(){S.envMode=!S.envMode;document.body.classList.toggle('envmode',S.envMode);updTransport();invalidate();if(!S.envMode)envSelClear();toast(S.envMode?'Hüllkurve: Klick auf die Linie setzt Punkte, Linie ziehen verschiebt das Stück · daneben ziehen wählt mehrere aus (Entf löscht) · im markierten Bereich hoch/runter ziehen = Passage lauter/leiser':'Hüllkurve aus',S.envMode?6000:2000)}
 function envTargets(){const ts=(S.tracks.filter(t=>t.sel).length?S.tracks.filter(t=>t.sel):[byId(S.focus)].filter(Boolean)).filter(t=>t.env&&t.env.length);if(!ts.length)toast('Keine Hüllkurve auf den ausgewählten Spuren');return ts}
 /* Effekt auf [i0,i1) anwenden. Gates mit Option „als Hüllkurve“ ändern das Audio nicht, sondern setzen Hüllkurvenpunkte. */
+/* Blende als Hüllkurve: Kurvenform mit wenigen Punkten nachbilden (Signal-linear 10, S-Kurve 6, Lautstärke-linear 1 Abschnitt –
+   die Hüllkurve verläuft zwischen Punkten in dB gerade) und zur vorhandenen Hüllkurve addieren. Außerhalb der Blende bleibt alles, wie es war. */
+const fadeG=(curve,x)=>curve==='lin'?x:curve==='s'?.5-.5*Math.cos(Math.PI*x):(x<=0?0:Math.pow(10,(x-1)*3));
+function fadeToEnv(t,i0,i1,curve,isIn){const a=i0/SR,b=i1/SR,len=tLen(t)/SR,eps=.001;if(b-a<.005)return 0;const n=curve==='lin'?10:curve==='s'?6:1,G=[];/* Lautstärke-linear = gerade Linie (2 Punkte) */
+  if(isIn&&a>eps)G.push({t:a-eps,db:0});/* davor unverändert (Sprung erst ab Blendenbeginn) */
+  for(let k=0;k<=n;k++){const x=k/n,g=fadeG(curve,isIn?x:1-x);G.push({t:a+(b-a)*x,db:g<=1e-5?ENV_MIN:Math.max(ENV_MIN,20*Math.log10(g))})}
+  if(!isIn&&b<len-eps)G.push({t:b+eps,db:0});/* danach wieder unverändert */
+  const gg={env:G},ex={env:(t.env||[]).map(q=>({t:q.t,db:q.db}))};
+  const ts=[...new Set(ex.env.map(q=>q.t).concat(G.map(q=>q.t)).map(x=>Math.round(x*1e5)/1e5))].filter(x=>x>=0&&x<=len+1e-6).sort((p,q)=>p-q);
+  t.env=ts.map(x=>({t:x,db:Math.round(clamp(envDbAt(ex,x)+envDbAt(gg,x),ENV_MIN,ENV_MAX)*10)/10}));return n+1}
 async function fxApply(fx,p,c,t,i0,i1,onp){
+  if(fx.envFade&&p.env){const n=fadeToEnv(t,i0,i1,p.curve,fx.id==='fin');c.note=`als Hüllkurve (${n} Punkte) – H: Punkte anpassen`;return'env'}
   if(fx.envOut&&p.env){const seg=t.ch.map(a=>a.slice(i0,i1)),open=await fx.analyze(seg,p,c,onp,t,i0),n=gateToEnv(t,open,i0,i1,p);
     c.note=gateNote(open)+` · als Hüllkurve (${n} Stellen) – H: Punkte anpassen`;return'env'}
   const out=await procRange(fx,p,c,t,i0,i1,onp);t.ch=spliceCh(t.ch,i0,i1,out);return out[0].length}
@@ -2273,6 +2298,10 @@ $('#bkDirB').onclick=async()=>{if(bkNeed){if(await bkPerm(true)){bkNeed=false;up
 $('#mCopy').onclick=copyChapters;$('#tImport').onclick=openTextImport;$('#tExport').onclick=()=>openTextExport();
 tedTA().addEventListener('keydown',e=>{e.stopPropagation();const dn=/^Digit([1-9])$/.exec(e.code);if(e.altKey&&dn&&ED&&ED.key==='notes'&&EMO[dn[1]-1]){e.preventDefault();emoPick(EMO[dn[1]-1],e.shiftKey)}else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();closeEditor(true)}else if(e.key==='Escape'){e.preventDefault();closeEditor(false)}});
 tedTA().addEventListener('blur',()=>setTimeout(()=>{if(ED&&document.activeElement!==tedTA())closeEditor(true)},120));
+/* Handy / sehr kleiner Bildschirm: einmal pro Besuch warnen (wegklickbar) */
+(()=>{const small=Math.min(screen.width||innerWidth,screen.height||innerHeight)<700,/* Gerät (nicht Fenster): Handy = kurze Bildschirmseite unter 700 px */touch=matchMedia('(pointer:coarse)').matches&&!matchMedia('(any-pointer:fine)').matches;let seen=false;try{seen=sessionStorage.getItem('pe-mobile-ok')==='1'}catch(e){}
+  if((!small&&!touch)||seen)return;setTimeout(()=>{modal(`<h3>Für den Desktop gebaut</h3><div class="hint" style="font-size:13px;line-height:1.6">Der Podcast Editor ist für <b>große Bildschirme mit Maus und Tastatur</b> gemacht. Auf dem Handy oder einem kleinen Tablet funktionieren viele Dinge nicht richtig – Ziehen, Schneiden, Hüllkurve und Tastenkürzel sind dort kaum bedienbar.<br><br>Am besten am Computer mit Chrome oder Edge öffnen.</div><div class="btns"><button class="primary" id="mobOk">Trotzdem öffnen</button></div>`);
+    $('#mobOk').onclick=()=>{try{sessionStorage.setItem('pe-mobile-ok','1')}catch(e){}closeModal()}},300)})();
 /* Safari/Firefox: einmal sagen, was dort fehlt (Rest funktioniert) */
 (()=>{const miss=[];if(!window.showDirectoryPicker)miss.push('automatische Sicherung in einen Ordner');if(!window.showSaveFilePicker)miss.push('der „Speichern unter“-Dialog (Dateien landen im Download-Ordner)');if(!(window.AudioContext&&AudioContext.prototype.setSinkId))miss.push('die Wahl des Ausgabegeräts');if(miss.length&&!lsGet('browserHint',false)){lsSet('browserHint',true);setTimeout(()=>toast('Hinweis: In diesem Browser fehlen '+miss.join(', ')+'. Alles andere funktioniert – für den vollen Umfang Chrome oder Edge verwenden.',10000),1500)}})();
 renderLanes();buildFx();renderEmo();refreshDevices().then(()=>{if(cfg.outDev)setOutput(cfg.outDev,true)});

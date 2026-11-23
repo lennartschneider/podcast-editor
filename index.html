@@ -165,11 +165,11 @@ body.sideoff #side{display:none}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
 #hidList{margin-top:10px}#hidList .hh{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d5d65;margin:0 0 4px 2px;display:flex;align-items:center;gap:6px}
-#hidList .hh .all{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11.5px;color:#f5b942;cursor:pointer;padding:1px 8px;border-radius:10px}#hidList .hh .all:hover{background:#2a2412}
+#hidList .hh .all{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11.5px;color:#f5b942;cursor:pointer;padding:1px 8px;border-radius:10px}#hidList .hh .all:hover{background:#2a2412}#hidList .hh .pl{margin-left:auto;padding:2px 6px;display:flex}#hidList .hh .pl.on{background:#2a2412}#hidList .hh .all{white-space:nowrap}#hidList .hh{white-space:nowrap}#hidList .hh .pl+.all{margin-left:0}#hidList .hh .pl .ic{width:13px;height:13px}
 #hidList .hr{display:flex;align-items:center;gap:4px;font-size:12px;color:#b9b9c0;padding:3px 4px 3px 8px;border-radius:8px;border-left:2px solid #f5b942;margin:2px 0;background:#1a1a1c}
-#hidList .hr .eo{display:flex;color:#f5b942;flex:none}#hidList .hr .eo .ic{width:13px;height:13px}
+#hidList .hr .eo{display:flex;color:#f5b942;flex:none}#hidList .hr.now{background:#2a2412;color:#f5d48a;box-shadow:inset 0 0 0 1px #f5b94266}#hidList .hr .nw{flex:none;font-size:11px;color:#f5b942;font-variant-numeric:tabular-nums}#hidList .hr .nw:empty{display:none}#hidList .hr .eo .ic{width:13px;height:13px}
 #hidList .hr .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}#hidList .hr .tx:hover{color:#e7e7ea}
-#hidList .hr .b{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8b8b93;flex:none}#hidList .hr .b:hover{background:#26262a;color:#e7e7ea}#hidList .hr .b.del:hover{background:#2a1717;color:#ff7b7b}
+#hidList .hr .b{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8b8b93;flex:none}#hidList .hr .b:hover{background:#26262a;color:#e7e7ea}#hidList .hr .b.del:hover{background:#2a1717;color:#ff7b7b}#hidList .hr .b .ic{width:14px;height:14px}
 .selg{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:3px 10px;font-size:12px;color:#74747c}
 .selg b{font-weight:500;color:#cfcfd6;font-variant-numeric:tabular-nums}
 .chipsrow{display:flex;flex-wrap:wrap;gap:4px}
@@ -422,6 +422,7 @@ const I={
  filt:SV('<path d="M4 2v12M8 2v12M12 2v12" stroke-opacity=".5"/><path d="M2.5 10h3M6.5 5h3M10.5 8.5h3"/>'),/* EQ-Schieber */
  gate:SV('<path d="M1.5 8h1.5l1-3.5 1.2 7 1.2-5 .9 1.5H9"/><path d="M10.5 3.5v9"/><path d="M12.5 8h2" stroke-opacity=".55"/>'),
  xgate:SV('<path d="M1.5 5h2.5l1-2.5 1.2 5 1.2-4 1 1.5h6"/><path d="M1.5 11.5h3M11.5 11.5h3"/><path d="M6 9.5v4M10 9.5v4"/>'),
+ trash:SV('<path d="M2.5 4.5h11M6.3 4.5V3h3.4v1.5"/><path d="M4 4.5l.7 8.5h6.6l.7-8.5"/><path d="M6.8 7v3.8M9.2 7v3.8"/>'),/* Mülleimer */
  umm:SV('<path d="M2.5 3.5h11v7.2H7.2L4.3 13v-2.3H2.5z"/><path d="M6.3 5.6l3.4 3M9.7 5.6l-3.4 3"/>'),/* Sprechblase mit X */
  trunc:SV('<path d="M2 8h2.5M11.5 8H14"/><path d="M5.5 4.5v7M10.5 4.5v7M7.3 8h1.4"/>'),
  rev:SV('<path d="M13 5H4M6 2.5 3.5 5 6 7.5M3 11h9M10 8.5l2.5 2.5-2.5 2.5"/>'),
@@ -510,7 +511,7 @@ function remapCuts(t,off0,f,drop){const n=tLen(t)/SR;
   if(t.hid&&t.hid.length)t.hid=t.hid.map(h=>({...h,at:Math.round(clamp(f(off0+h.at)-t.off,0,n)*1e4)/1e4})).sort((x,y)=>x.at-y.at);/* ausgeblendete Passagen: Position mitführen */
   if(t.clr&&t.clr.length){const r=[];for(const q of t.clr){const a=clamp(f(off0+q.a)-t.off,0,n),b=clamp(f(off0+q.b)-t.off,0,n);if(b-a>1e-3)r.push({a,b,c:q.c})}t.clr=clrNorm(r)}
   if(t.cuts&&t.cuts.length){const r=[];for(const x of t.cuts){const v=f(off0+x)-t.off;if(v>.001&&v<n-.001&&!r.some(y=>Math.abs(y-v)<.002))r.push(v)}t.cuts=r.sort((p,q)=>p-q)}
-  if(t.env&&t.env.length){const r=[];for(const p of t.env){const ab=off0+p.t;if(drop&&drop(ab))continue;const v=f(ab)-t.off;if(v>=-.001&&v<=n+.001)r.push({t:v,db:p.db})}t.env=r.sort((p,q)=>p.t-q.t)}}
+  if(t.env&&t.env.length){const r=[];for(const p of t.env){const ab=off0+p.t;if(drop&&drop(ab))continue;const v=f(ab)-t.off;if(v>=-.001&&v<=n+.001)r.push({...p,t:v})}t.env=r.sort((p,q)=>p.t-q.t)}}
 function removeTime(t,a,b,raw){const n=tLen(t),off0=t.off;const i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1>i0)t.ch=spliceCh(t.ch,i0,i1,null);if(a<t.off)t.off-=Math.min(b,t.off)-a;if(!raw)remapCuts(t,off0,x=>x<=a?x:x>=b?x-(b-a):a,x=>x>a+1e-9&&x<b-1e-9)}
 function insertSilence(t,at,len,raw){const n=tLen(t),off0=t.off;if(!n||len<=0)return;if(at<=t.off+1e-9)t.off+=len/SR;else{const p=Math.round((at-t.off)*SR);if(p>=n)return;t.ch=spliceCh(t.ch,p,p,t.ch.map(()=>Seq.zeros(len)))}if(!raw)remapCuts(t,off0,x=>x>at+1e-9?x+len/SR:x)}
 function insertAt(t,at,chs,raw){const n=tLen(t),off0=t.off,L=chs[0].length/SR;if(!n){t.off=at;t.ch=chs.map(sq);return}chs=matchCh(chs,t.ch.length);const p=Math.round((at-t.off)*SR);
@@ -1056,7 +1057,7 @@ async function ummApply(ts,p){setBusy(true,'Suche Ähms …',true);await paintPa
   if(!cuts.length)return toast(skip?`Nichts ausgeblendet – ${skip} gefunden, aber dort spricht gleichzeitig jemand anderes`:'Keine Ähms gefunden'+(ts.some(t=>!t.umm)?' – Tipp: ein Ähm markieren und „Beispiel aus Auswahl“ wählen':''),5000);
   cuts.sort((x,y)=>x.a-y.a);const M=[];for(const c of cuts){const l=M[M.length-1];if(l&&c.a<=l.b+.01)l.b=Math.max(l.b,c.b);else M.push({...c})}
   stopAll();pushUndo('Ähms entfernen');let sum=0;
-  for(let i=M.length-1;i>=0;i--){const c=M[i],set=(S.sync?syncSet(ts):[c.t]).filter(t=>tLen(t));hideRange(set,c.a,c.b,'umm');sum+=c.b-c.a}
+  for(let i=M.length-1;i>=0;i--){const c=M[i],set=(S.sync?syncSet(ts):[c.t]).filter(t=>tLen(t));hideRange(set,c.a,c.b,'umm',(p.fade||0)/1000);sum+=c.b-c.a}
   if(hasSel())S.sel.b=Math.max(S.sel.a,S.sel.b-sum);S.lastFx='umm';changed(true);
   toast(`${M.length} ${M.length===1?'Ähm':'Ähms'} ausgeblendet · ${nf(sum,1)} s${skip?` · ${skip} übersprungen (jemand spricht gleichzeitig)`:''} – über „Ausgeblendete Passagen“ zurückholbar`,6000)}
 async function ummPreview(ts,p){setBusy(true,'Suche Ähms …',true);await paintPause();
@@ -1166,7 +1167,8 @@ const FX=[
 {id:'umm',name:'Ähms entfernen',icon:'umm',
  desc:'Findet „Ähm“ und „Äh“ am Klang (keine KI) und blendet sie aus – jederzeit zurückholbar über die gelben Markierungen oder „Ausgeblendete Passagen“. Genauer wird es, wenn du pro Spur ein Ähm markierst und „Beispiel aus Auswahl“ klickst.',
  params:[{k:'mode',l:'Suche',type:'sel',opts:[['safe','Vorsichtig'],['more','Gründlich']],def:'safe'},
-  {k:'min',l:'Mindestlänge',min:.15,max:.6,step:.05,def:.25,u:'s'},{k:'max',l:'Höchstlänge',min:.6,max:2,step:.1,def:1.4,u:'s'},{k:'pause',l:'Pausen rund ums Ähm mitkürzen',type:'chk',def:true}],
+  {k:'min',l:'Mindestlänge',min:.15,max:.6,step:.05,def:.25,u:'s'},{k:'max',l:'Höchstlänge',min:.6,max:2,step:.1,def:1.4,u:'s'},{k:'pause',l:'Pausen rund ums Ähm mitkürzen',type:'chk',def:true},
+  {k:'fade',l:'Übergang weich blenden',min:0,max:300,step:10,def:40,fmt:v=>v>0?Math.round(v)+' ms':'aus'}],
  extra(pn){const r=el('div','chipsrow');r.style.margin='8px 0 0';const a=el('button','','Beispiel aus Auswahl');a.dataset.tip=tipHtml('umm.learn');a.onclick=ummLearn;
    const b=el('button','','Beispiel löschen');b.title='Gespeichertes Beispiel-Ähm der ausgewählten Spur verwerfen';b.onclick=ummForget;r.append(a,b);pn.append(r)},
  info(ts){const t=ts[0],[i0,i1]=trackRange(t),P={...FXP.umm},ex=ts.filter(x=>x.umm).map(x=>esc(x.name));
@@ -1247,6 +1249,7 @@ const TIPS={
  'umm.min':['So lang muss der gleichbleibende Laut mindestens sein. Kürzer = findet auch kurze „Äh“, aber eher mal ein normales Wort.','0,25 s (0,2–0,35 s).'],
  'umm.max':['Längere Laute werden nicht als Ähm gezählt – schützt z. B. gesungene oder sehr lang gezogene Wörter.','1,4 s.'],
  'umm.pause':['Steht das Ähm zwischen zwei Pausen, bleiben nach dem Entfernen sonst beide Pausen hintereinander stehen – das klingt nach einem Loch. An: es bleibt ungefähr nur die längere der beiden Pausen.','An.'],
+ 'umm.fade':['Setzt an jeder Schnittstelle Punkte auf die Hüllkurve: kurz vor dem Schnitt leiser werden, danach wieder lauter. So gibt es kein Knacken und keinen harten Übergang. Die Punkte kannst du im Hüllkurven-Modus (H) nachträglich verschieben; holst du ein Ähm zurück, verschwinden sie wieder. 0 = aus.','40 ms (20–80 ms). Länger klingt weicher, verschluckt aber eher den Anfang oder das Ende eines Wortes.'],
  'umm.learn':['Markiere in einer Spur genau ein Ähm und klicke hier. Der Editor merkt sich Klangfarbe und Tonhöhe dieser Stimme und erkennt deren Ähms danach zuverlässiger – und verwechselt sie seltener mit Wörtern. Gilt für jede ausgewählte Spur einzeln und wird mit der Sitzung gespeichert.','Pro Sprecher ein typisches, deutliches Ähm.'],
  trunc:['Findet lange Pausen und kürzt sie. Die Aufnahme wird kürzer und wirkt flüssiger. Anders als „Pausen absenken“ schneidet es Zeit heraus.','Mit „Sync“ an, damit alle Spuren gleich gekürzt werden.'],
  'trunc.thr':['Was als Stille zählt: alles leiser als dieser Wert. Höher (z. B. −35 dB) = auch leises Rauschen gilt als Pause.','−50 bis −40 dB.'],
@@ -1532,13 +1535,17 @@ function opHide(){if(!editable())return;const ts=targets();if(!ts)return;if(!has
   stopAll();pushUndo('Ausblenden');const L=hideRange(set,a,b);
   setSel(a,a);changed(true);toast(`${nf(L,1)} s ausgeblendet – über die gelbe Markierung oder „Ausgeblendete Passagen“ zurückholbar`,4000)}
 /* [a,b) ausblenden; Spuren, die erst danach beginnen, rücken mit (bleiben synchron). tag: 'umm' = gefundenes Ähm */
-function hideRange(set,a,b,tag){const gid='h'+Date.now().toString(36)+(HIDN++).toString(36)+Math.random().toString(36).slice(2,5),txt={};
+function hideRange(set,a,b,tag,fade){const gid='h'+Date.now().toString(36)+(HIDN++).toString(36)+Math.random().toString(36).slice(2,5),txt={};
   for(const k of TKEYS)txt[k]=S[k].filter(it=>it.a>=a-1e-6&&it.b<=b+1e-6).map(it=>({...it,a:it.a-a,b:it.b-a}));
   let L=0;for(const t of set){if(!(a<tEnd(t)&&b>t.off)){if(t.off>=b){logOp([t],{k:'del',a,b});removeTime(t,a,b)}continue}
     const n=tLen(t),i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1<=i0)continue;
     const la=i0/SR,lb=i1/SR,seg=t.ch.map(s=>s.sub(i0,i1)),pcs=aPieces(clrAbs(t),t.off+la,t.off+lb,null),env=(t.env||[]).filter(q=>q.t>=la-1e-6&&q.t<=lb+1e-6).map(q=>({t:q.t-la,db:q.db}));
     logOp([t],{k:'del',a,b});removeTime(t,a,b);
-    t.hid=(t.hid||[]).concat([{gid,at:Math.round(la*1e4)/1e4,len:(i1-i0)/SR,seg,clr:pcs,env,txt,...(tag?{tag}:{})}]).sort((x,y)=>x.at-y.at);L=Math.max(L,(i1-i0)/SR)}
+    /* Blende: vor dem Schnitt aus-, danach einblenden (Hüllkurvenpunkte mit Kennung hf; überdeckte Punkte merken → beim Zurückholen wiederherstellen) */
+    let efx=null;if(fade>0){const len=tLen(t)/SR,lc=clamp(a-t.off,0,len),pre=Math.max(0,lc-fade),post=Math.min(len,lc+fade),e=t.env||[],inR=q=>q.t>pre+1e-6&&q.t<post-1e-6;
+      const add=[{t:lc,db:ENV_MIN,hf:gid}];if(lc>1e-3)add.push({t:pre,db:envDbAt(t,pre),hf:gid});if(lc<len-1e-3)add.push({t:post,db:envDbAt(t,post),hf:gid});
+      efx=e.filter(inR).map(q=>({...q,t:q.t-lc}));t.env=e.filter(q=>!inR(q)).concat(add).sort((x,y)=>x.t-y.t)}
+    t.hid=(t.hid||[]).concat([{gid,at:Math.round(la*1e4)/1e4,len:(i1-i0)/SR,seg,clr:pcs,env,txt,...(tag?{tag}:{}),...(efx?{efx}:{})}]).sort((x,y)=>x.at-y.at);L=Math.max(L,(i1-i0)/SR)}
   for(const k of TKEYS)S[k]=S[k].filter(it=>!(it.a>=a-1e-6&&it.b<=b+1e-6));shiftTextDel(a,b);return L}
 const hidParts=gid=>S.tracks.map(t=>[t,(t.hid||[]).find(h=>h.gid===gid)]).filter(x=>x[1]);
 function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!parts.length)return;stopAll();pushUndo('Wieder einblenden');const{P,L}=restoreHidCore(parts);
@@ -1546,6 +1553,7 @@ function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!par
 function restoreHidCore(parts){let P=null,L=0,txt=null;
   for(const[t,h]of parts){const at=t.off+h.at,off0=t.off,dAbs=clrAbs(t),NL=h.seg[0].length;if(P==null){P=at;txt=h.txt}L=Math.max(L,h.len);
     t.hid=t.hid.filter(x=>x!==h);logOp([t],{k:'paste',a:at,b:at,len:Math.round(h.len*1e4)/1e4});
+    if(h.efx){const l0=at-t.off;t.env=(t.env||[]).filter(q=>q.hf!==h.gid).concat(h.efx.map(q=>({...q,t:q.t+l0}))).sort((x,y)=>x.t-y.t)}
     insertAt(t,at,h.seg,true);remapCuts(t,off0,x=>x>at+1e-9?x+NL/SR:x);clrFromAbs(t,aIns(dAbs,at,NL/SR,h.clr));
     if(h.env&&h.env.length){const l0=at-t.off;t.env=(t.env||[]).concat(h.env.map(q=>({t:q.t+l0,db:q.db}))).sort((x,y)=>x.t-y.t)}
     const len=tLen(t)/SR,c=(t.cuts||[]).slice();for(const p of[at,at+NL/SR]){const l=p-t.off;if(l>.001&&l<len-.001&&!c.some(x=>Math.abs(x-l)<.002))c.push(l)}t.cuts=c.sort((x,y)=>x-y)}
@@ -1557,7 +1565,24 @@ function restoreTag(tag){if(!editable())return;const pos=g=>{const p=hidParts(g)
 async function deleteHid(gid){const parts=hidParts(gid);if(!parts.length)return;
   if(!await confirmBox('Endgültig löschen?',`Die ausgeblendete Passage (${nf(parts[0][1].len,1)} s) wird endgültig entfernt und lässt sich danach nur noch mit Strg+Z zurückholen.`,'Löschen'))return;
   pushUndo('Ausgeblendete Passage löschen');for(const[t,h]of parts)t.hid=t.hid.filter(x=>x!==h);changed(true);toast('Ausgeblendete Passage gelöscht')}
-function previewHid(gid){const p=hidParts(gid).find(x=>x[0].id===S.focus)||hidParts(gid)[0];if(!p)return;playPreview(p[1].seg.map(s=>s.slice()),p[0])}
+/* Anhören: alle Spuren der Passage zusammen (wie bei der Wiedergabe) – sonst hört man bei Sync evtl. nur die stille Spur */
+function hidMix(gid){const parts=hidParts(gid).filter(([t])=>audible(t));if(!parts.length)return null;
+  const nc=Math.max(...parts.map(([,h])=>h.seg.length)),n=Math.max(...parts.map(([,h])=>h.seg[0].length)),out=Array.from({length:nc},()=>new Float32Array(n));
+  for(const[t,h]of parts){const g=db2lin(t.vol);for(let c=0;c<nc;c++){const a=h.seg[Math.min(c,h.seg.length-1)].slice(),o=out[c];for(let i=0;i<a.length;i++)o[i]+=a[i]*g}}return out}
+function previewHid(gid){const out=hidMix(gid);if(!out)return toast('Die Spuren dieser Passage sind stummgeschaltet');playPreview(out,{vol:0,pan:0,ch:out})}
+/* Welche Passage läuft gerade? Zeile in der Liste hervorheben + Cursor an die Stelle auf der Spur */
+let PVT=null;
+const pvtBtn=on=>{const b=$('#hidList .hh .pl');if(b){b.innerHTML=on?I.stop:I.play;b.classList.toggle('on',on)}};
+function tickPVT(){const p=PVT;if(!p)return;if(PV.src!==p.src){PVT=null;markHidNow(null);pvtBtn(false);return}
+  const e=AC.currentTime-p.t0,it=p.items.find(x=>e>=x.a&&e<x.b),g=it?it.gid:null;
+  if(g!==p.last){p.last=g;markHidNow(g,it&&`${it.k+1}/${p.n}`);if(it)moveCur(it.pos)}setTimeout(tickPVT,60)}
+function markHidNow(g,lbl){for(const r of $$('#hidList .hr')){const on=!!g&&r.dataset.gid===g;r.classList.toggle('now',on);const n=$('.nw',r);if(n)n.textContent=on?lbl||'':'';if(on)r.scrollIntoView({block:'nearest'})}}
+/* Alle ausgeblendeten Passagen einer Art (z. B. Ähms) hintereinander anhören – mit kurzer Pause dazwischen; nochmal klicken = Stopp */
+function previewTag(tag){if(PV.src){stopPreview();return}const pos=g=>{const p=hidParts(g)[0];return p[0].off+p[1].at};
+  const gids=[...new Set(S.tracks.flatMap(t=>(t.hid||[]).filter(h=>h.tag===tag).map(h=>h.gid)))].sort((x,y)=>pos(x)-pos(y)),mix=gids.map(hidMix).filter(Boolean);
+  if(!mix.length)return toast('Nichts zum Anhören (Spuren stummgeschaltet?)');const gap=Math.round(.4*SR),nc=Math.max(...mix.map(m=>m.length)),len=mix.reduce((a,m)=>a+m[0].length+gap,0),out=Array.from({length:nc},()=>new Float32Array(len));
+  const gs=gids.filter(g=>hidMix(g)),items=[];let o=0;mix.forEach((m,k)=>{for(let c=0;c<nc;c++)out[c].set(m[Math.min(c,m.length-1)],o);items.push({gid:gs[k],a:o/SR,b:(o+m[0].length+gap)/SR,pos:pos(gs[k]),k});o+=m[0].length+gap});
+  playPreview(out,{vol:0,pan:0,ch:out});PVT={src:PV.src,t0:AC.currentTime,items,last:null,n:items.length};pvtBtn(true);tickPVT();toast(`Spielt ${mix.length} Ähms hintereinander ab (${nf(len/SR,0)} s) – nochmal ▶ klicken stoppt`,3500)}
 function hidMenu(gid,x,y){ctxMenu(x,y,[['↺ Wieder einblenden',()=>restoreHid(gid)],['▶ Anhören',()=>previewHid(gid)],'-',['Endgültig löschen',()=>deleteHid(gid)]])}
 /* Übersicht in der Seitenleiste */
 let hidSig='';
@@ -1565,8 +1590,8 @@ function renderHid(){const box=$('#hidList');if(!box)return;const groups=new Map
   const sig=[...groups.values()].map(g=>g.h.gid+'@'+(g.t.off+g.h.at).toFixed(3)+':'+g.names.join('|')).join(',');if(sig===hidSig)return;hidSig=sig;box.innerHTML='';
   if(!groups.size){box.style.display='none';return}box.style.display='';const hh=el('div','hh','Ausgeblendete Passagen');box.append(hh);
   const list=[...groups.values()].sort((x,y)=>(x.t.off+x.h.at)-(y.t.off+y.h.at)),nu=list.filter(g=>g.h.tag==='umm').length;
-  if(nu>1){const ab=el('span','all',`↺ alle ${nu} Ähms`);ab.title='Alle ausgeblendeten Ähms auf einmal zurückholen (Strg+Z macht es rückgängig)';ab.onclick=()=>restoreTag('umm');hh.append(ab)}
-  for(const g of list){const d=el('div','hr');d.innerHTML=`<span class="eo">${I.eyeoff}</span><span class="tx"></span><span class="b">↺</span><span class="b">▶</span><span class="b del">×</span>`;
+  if(nu>1){const ab=el('span','all',`↺ alle ${nu}`);ab.title=`Alle ${nu} ausgeblendeten Ähms auf einmal zurückholen (Strg+Z macht es rückgängig)`;ab.onclick=()=>restoreTag('umm');const pb=el('span','all pl',I.play);pb.title='Alle Ähms hintereinander anhören (nochmal klicken = Stopp)';pb.onclick=()=>previewTag('umm');hh.append(pb,ab)}
+  for(const g of list){const d=el('div','hr');d.dataset.gid=g.h.gid;d.innerHTML=`<span class="eo">${I.eyeoff}</span><span class="tx"></span><span class="nw"></span><span class="b">↺</span><span class="b">▶</span><span class="b del">${I.trash}</span>`;
     $('.tx',d).textContent=`${g.h.tag==='umm'?'Ähm · ':''}${fmtT(g.t.off+g.h.at)} · ${nf(g.h.len,1)} s · ${g.names.join(', ')}`;
     const[bR,bP,bD]=d.querySelectorAll('.b');bR.title='Wieder einblenden (an der gelben Markierung)';bP.title='Anhören';bD.title='Endgültig löschen';
     bR.onclick=()=>restoreHid(g.h.gid);bP.onclick=()=>previewHid(g.h.gid);bD.onclick=()=>deleteHid(g.h.gid);
@@ -2087,7 +2112,7 @@ function updTitle(){const n=S.projName||'Unbenannt';$('#pname').innerHTML=esc(n)
 /* Projektdatei stückweise schreiben (Kopf, dann jeden Block) – nie das ganze Projekt auf einmal im Speicher */
 async function writeProject(write,onp){const order=[],tracks=[];let off=0;
   for(const t of S.tracks){tracks.push({id:t.id,name:t.name,off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h,cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,umm:t.umm||null,clr:t.clr||[],ch:t.ch.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o}),
-    hid:(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,ch:h.seg.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o})}))})}
+    hid:(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,efx:h.efx,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,ch:h.seg.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o})}))})}
   const head={app:'Audio Editor',v:1,sr:SR,saved:new Date().toISOString(),tid:TID,mid:MID,sel:S.sel,view:S.view,sync:S.sync,marks:S.marks,notes:S.notes,subs:S.subs,lanes:S.lanesOn,noise:S.noise?{dur:S.noise.dur,pow:Array.from(S.noise.pow)}:null,tracks};
   const js=new TextEncoder().encode(JSON.stringify(head)),pre=new Uint8Array(16);pre.set(new TextEncoder().encode(PMAGIC));new DataView(pre.buffer).setUint32(8,js.length,true);
   await write(pre);await write(js);await write(new Uint8Array((4-(16+js.length)%4)%4));let done=0;
@@ -2158,6 +2183,10 @@ const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=index
 /* Autospeichern: Audiodaten werden einmalig unter einer eigenen ID abgelegt; danach wird nur noch die kleine Projektbeschreibung geschrieben.
    So kostet z. B. ein Hüllkurvenpunkt fast nichts – nur wirklich neues Audio wird gespeichert. */
 const AID=new WeakMap();let saveN=0;
+/* Schließen/Neuladen mit ungespeicherten Änderungen (oder laufender Aufnahme/Berechnung): Browser fragt nach. Eigener Text ist in Browsern nicht möglich. */
+window.addEventListener('beforeunload',e=>{if(!(S.tracks.length&&(S.dirty||R.on||S.busy)))return;
+  if(saveT&&!R.on&&!S.busy){clearTimeout(saveT);saveSession()}/* Sitzung im Browser so schnell wie möglich sichern, falls doch geschlossen wird */
+  e.preventDefault();e.returnValue=''});
 let saveT;function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(saveSession,2000);S.dirtyBk=true;if(!S.dirty){S.dirty=true;updTitle()}}
 /* Mehrere Sitzungen: Liste „sessions“ (neueste zuerst, max. SES_MAX), je Sitzung ein Dokument „ses:<id>“ mit Block-IDs.
    Audioblöcke („a:…“) werden erst gelöscht, wenn keine gespeicherte Sitzung sie mehr braucht. */
@@ -2186,7 +2215,7 @@ async function saveSessionLocked(){
   const have=new Set(await idb.keys());/* was wirklich im Speicher liegt – Blöcke mit ID, die fehlen, werden neu geschrieben */
   /* pro Block speichern: nur Blöcke ohne ID sind neu; in kleinen Paketen mit Pausen schreiben, damit nichts hängt */
   const fresh=[],refCh=chs=>chs.map(s=>s.b.map(blk=>{let id=AID.get(blk);if(!id||!have.has(id)){id=id||'a:'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());fresh.push([id,blk]);have.add(id);AID.set(blk,id)}return id})),ref=t=>refCh(t.ch);
-  const hidOut=t=>(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,segB:refCh(h.seg),segN:h.seg.map(s=>s.b.map(x=>x.length))}));
+  const hidOut=t=>(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,efx:h.efx,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,segB:refCh(h.seg),segN:h.seg.map(s=>s.b.map(x=>x.length))}));
   const tracks=S.tracks.map(t=>({id:t.id,name:t.name,hid:hidOut(t),chB:ref(t),chN:t.ch.map(s=>s.b.map(blk=>blk.length)),cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,umm:t.umm||null,clr:t.clr||[],off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h}));
   try{for(let i=0;i<fresh.length;i+=8){await idb.putMany(fresh.slice(i,i+8).map(([id,blk])=>[id,blk.slice()]));await yieldUI()}/* slice: nur die Bytes des Blocks, nicht den ganzen Puffer */
     let list=(await sesList()).filter(e=>e.sid!==sid);list.unshift({sid,name:sesName(),n:S.tracks.length,dur:projDur(),saved:Date.now(),bytes:projBytes()});

@@ -164,7 +164,26 @@ body.sideoff #side{display:none}
 #rzSteps{display:flex;flex-direction:column;gap:2px;max-height:46vh;overflow:auto;margin:8px 0}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
-#hidList{margin-top:10px}#hidList .hh{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d5d65;margin:0 0 4px 2px;display:flex;align-items:center;gap:6px}
+#hidList{max-height:42vh;overflow:auto;margin:0 -4px;padding:0 4px;scrollbar-width:thin}
+#trQ{width:100%;margin:0 0 6px}
+#trList{max-height:48vh;overflow:auto;margin:0 -6px;padding:0 6px;scrollbar-width:thin;overscroll-behavior:contain}
+#trList .trl{padding:5px 8px 6px 10px;border-radius:8px;border-left:2px solid var(--sc,#3a3a40);margin:2px 0}
+#trList .trl:hover{background:#1a1a1c}
+#trList .trl.cur{background:#211d30;box-shadow:inset 0 0 0 1px #c4b5fd33}
+#trList .trm{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#66666e;margin-bottom:1px;user-select:none}
+#trList .trm .tm{cursor:pointer;font-variant-numeric:tabular-nums}#trList .trm .tm:hover{color:#e7e7ea}
+#trList .trm .sp{font-weight:600;letter-spacing:.02em}
+#trList .trm .ed{margin-left:auto;opacity:0;cursor:pointer;display:flex;padding:1px 3px;border-radius:6px}#trList .trl:hover .ed{opacity:.75}#trList .trm .ed:hover{background:#26262a;opacity:1}#trList .trm .ed .ic{width:12px;height:12px}
+#trList .tt{font-size:13px;line-height:1.5;color:#d4d4d8;user-select:text;cursor:text;white-space:pre-wrap;word-break:break-word}
+#trList .tt ::selection{background:#5b8def66}
+#trList .nt{background:#1c2a3f;color:#dbe6ff;border-radius:3px;box-shadow:0 0 0 1px #8ab4ff55;cursor:pointer}
+#trList .hit{background:#5c4a12;color:#fff;border-radius:2px}
+#trList .ne{font-size:11px;margin:0 1px 0 3px;cursor:pointer;user-select:none;white-space:nowrap}
+#trList .none{padding:6px 2px}
+#trBar{position:fixed;z-index:70;display:none;align-items:center;gap:1px;padding:4px;background:#232326;border:1px solid #34343a;border-radius:12px;box-shadow:0 10px 28px #000a}
+#trBar.on{display:flex}
+#trBar button{background:none;border:0;padding:4px 6px;min-width:0;height:28px;border-radius:8px;font-size:14px;color:#e7e7ea;display:flex;align-items:center;gap:4px}
+#trBar button:hover{background:#2f2f34}#trBar button.t{font-size:12px;padding:4px 8px}#trBar .sep{width:1px;height:18px;background:#3a3a40;margin:0 3px}#trBar .ic{width:14px;height:14px}#hidList .hh{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d5d65;margin:0 0 4px 2px;display:flex;align-items:center;gap:6px}
 #hidList .hh .all{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11.5px;color:#f5b942;cursor:pointer;padding:1px 8px;border-radius:10px}#hidList .hh .all:hover{background:#2a2412}#hidList .hh .pl{margin-left:auto;padding:2px 6px;display:flex}#hidList .hh .pl.on{background:#2a2412}#hidList .hh .all{white-space:nowrap}#hidList .hh{white-space:nowrap}#hidList .hh .pl+.all{margin-left:0}#hidList .hh .pl .ic{width:13px;height:13px}
 #hidList .hr{display:flex;align-items:center;gap:4px;font-size:12px;color:#b9b9c0;padding:3px 4px 3px 8px;border-radius:8px;border-left:2px solid #f5b942;margin:2px 0;background:#1a1a1c}
 #hidList .hr .eo{display:flex;color:#f5b942;flex:none}#hidList .hr.now{background:#2a2412;color:#f5d48a;box-shadow:inset 0 0 0 1px #f5b94266}#hidList .hr .nw{flex:none;font-size:11px;color:#f5b942;font-variant-numeric:tabular-nums}#hidList .hr .nw:empty{display:none}#hidList .hr .eo .ic{width:13px;height:13px}
@@ -312,12 +331,16 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
     </div>
     <aside id="side">
       <div class="sec"><h4>Auswahl</h4><div class="selg" id="selInfo"></div></div>
-      <div class="sec"><h4>Bearbeiten</h4><div class="chipsrow" id="editChips"></div><div id="hidList" style="display:none"></div></div>
+      <div class="sec"><h4>Bearbeiten</h4><div class="chipsrow" id="editChips"></div></div>
+      <div class="sec" id="secHid" style="display:none"><h4>Ausgeblendete Passagen <span class="r" id="hidCount"></span></h4><div id="hidList"></div></div>
       <div class="sec"><h4>Kapitel &amp; Text <span class="r" title="B Kapitel · K Kommentar · T Untertitel · C Einblendung"><kbd>B</kbd> <kbd>K</kbd> <kbd>T</kbd></span></h4>
         <div class="chipsrow" id="laneChips" style="margin-bottom:8px"></div>
         <div id="markList"></div>
         <div class="hint" id="textCounts"></div>
         <div class="chipsrow" style="margin-top:6px"><button id="mCopy" title="Kapitel als Zeitstempel-Liste für Shownotes / YouTube kopieren">Kapitel kopieren</button><button id="tImport" title="SRT, VTT, Audacity-Marken oder Zeitstempel-Liste">Importieren …</button><button id="tExport" title="SRT, VTT, Podcasting-2.0-JSON, Audacity-Marken">Exportieren …</button></div></div>
+      <div class="sec" id="secTr"><h4>Transkript <span class="r" id="trCount"></span></h4>
+        <input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off">
+        <div id="trList"></div></div>
       <div class="sec"><h4>Effekte <span class="r">wirken auf die Auswahl · <kbd>Strg+R</kbd> wiederholt</span></h4><div class="fx" id="fxList"></div></div>
       <div class="sec" id="secLog"><h4>Protokoll &amp; Rezepte</h4>
         <div class="hint" id="logHead"></div><div id="logList"></div>
@@ -422,6 +445,7 @@ const I={
  filt:SV('<path d="M4 2v12M8 2v12M12 2v12" stroke-opacity=".5"/><path d="M2.5 10h3M6.5 5h3M10.5 8.5h3"/>'),/* EQ-Schieber */
  gate:SV('<path d="M1.5 8h1.5l1-3.5 1.2 7 1.2-5 .9 1.5H9"/><path d="M10.5 3.5v9"/><path d="M12.5 8h2" stroke-opacity=".55"/>'),
  xgate:SV('<path d="M1.5 5h2.5l1-2.5 1.2 5 1.2-4 1 1.5h6"/><path d="M1.5 11.5h3M11.5 11.5h3"/><path d="M6 9.5v4M10 9.5v4"/>'),
+ pen:SV('<path d="M10.8 2.8l2.4 2.4-7.4 7.4-3 .6.6-3z"/><path d="M9.3 4.3l2.4 2.4"/>'),
  trash:SV('<path d="M2.5 4.5h11M6.3 4.5V3h3.4v1.5"/><path d="M4 4.5l.7 8.5h6.6l.7-8.5"/><path d="M6.8 7v3.8M9.2 7v3.8"/>'),/* Mülleimer */
  umm:SV('<path d="M2.5 3.5h11v7.2H7.2L4.3 13v-2.3H2.5z"/><path d="M6.3 5.6l3.4 3M9.7 5.6l-3.4 3"/>'),/* Sprechblase mit X */
  trunc:SV('<path d="M2 8h2.5M11.5 8H14"/><path d="M5.5 4.5v7M10.5 4.5v7M7.3 8h1.4"/>'),
@@ -1085,7 +1109,7 @@ const FX=[
 {id:'enh',name:'Sprache optimieren',icon:'enh',star:true,key:'Auto',
  desc:'Ein Klick wie „Enhance Speech“: entfernt Brummen und Rauschen, macht die Stimme klarer, gleicht Lautstärke aus und bringt alles auf Podcast-Pegel. (Klassische Signalverarbeitung, keine KI.)',
  params:[{k:'str',l:'Stärke',type:'sel',opts:[['leicht','Leicht'],['mittel','Mittel'],['stark','Stark']],def:'mittel'},{k:'lufs',l:'Ziel-Lautheit',min:-24,max:-12,step:.5,def:-16,u:'LUFS'},
-  {k:'nr',l:'Rauschen entfernen',type:'chk',def:true},{k:'eq',l:'Klang: Mulm weg, Präsenz & Luft',type:'chk',def:true},{k:'lev',l:'Lautstärke-Schwankungen ausgleichen (Leveler)',type:'chk',def:true},{k:'comp',l:'Dynamik glätten (Kompressor)',type:'chk',def:true}],
+  {k:'nr',l:'Rauschen entfernen',type:'chk',def:true},{k:'lev',l:'Lautstärke-Schwankungen ausgleichen (Leveler)',type:'chk',def:true},{k:'eq',l:'Klang: Mulm weg, Präsenz & Luft',type:'chk',def:false},{k:'comp',l:'Dynamik glätten (Kompressor)',type:'chk',def:false}],
  handle:.5,info:ts=>scopeTxt(ts)+'<br>Kette: Hochpass → Rauschreduzierung → EQ → Leveler → Kompressor → Lautheit → weicher Limiter (Spitzen max. −1,5 dB)',
  async run(seg,p,c,onp,t){const E=ENH[p.str]||ENH.mittel;removeDC(seg);filt(seg,'hp',80,0,true);
    if(p.nr){const pow=S.noise?S.noise.pow:autoProfileFor(t);for(let i=0;i<seg.length;i++)seg[i]=await nrRun(seg[i],pow,{red:E.red,sens:6,smooth:3},f=>onp((i+f)/seg.length*.7))}
@@ -1190,9 +1214,9 @@ const TIPS={
  'enh.str':['Wie stark eingegriffen wird. Stärker entfernt mehr Rauschen und macht alles gleichmäßiger, kann aber künstlich klingen.','Mittel. Leicht bei gutem Mikrofon und ruhigem Raum, Stark bei lauter Umgebung.'],
  'enh.lufs':['Wie laut das Ergebnis insgesamt klingt. Eine Zahl näher an 0 bedeutet lauter.','Podcast: −16 LUFS (Stereo) bzw. −19 LUFS (Mono).'],
  'enh.nr':['Entfernt gleichmäßige Hintergrundgeräusche wie Rauschen, Lüfter oder Brummen.','An lassen – außer die Aufnahme ist schon sehr sauber.'],
- 'enh.eq':['Klangfarbe: nimmt dumpfe, „mulmige“ Anteile heraus und macht die Stimme etwas klarer und frischer.','An.'],
+ 'enh.eq':['Klangfarbe: nimmt dumpfe, „mulmige“ Anteile heraus und macht die Stimme etwas klarer und frischer.','Aus – einschalten, wenn die Stimme dumpf oder topfig klingt.'],
  'enh.lev':['Gleicht aus, wenn jemand mal lauter und mal leiser spricht oder sich vom Mikrofon wegdreht.','An – besonders bei langen Aufnahmen.'],
- 'enh.comp':['Macht die Stimme gleichmäßiger, indem laute Spitzen etwas gebremst werden. Klingt dadurch „radiomäßiger“.','An.'],
+ 'enh.comp':['Macht die Stimme gleichmäßiger, indem laute Spitzen etwas gebremst werden. Klingt dadurch „radiomäßiger“.','Aus – der Leveler reicht meist. Einschalten, wenn einzelne Wörter oder Lacher herausstechen.'],
  nr:['Entfernt gleichmäßige Geräusche im Hintergrund – Rauschen, Lüfter, Klimaanlage, Brummen. Gegen einzelne Geräusche wie Husten oder Klicks hilft es nicht.','Zuerst eine Stelle mit reinem Rauschen (ohne Sprache) markieren und „Profil aus Auswahl“ klicken, dann anwenden.'],
  'nr.red':['Wie stark das Rauschen leiser gemacht wird. Zu viel lässt die Stimme blechern oder wie „unter Wasser“ klingen.','6–15 dB, Standard 12 dB.'],
  'nr.sens':['Wie schnell etwas als Rauschen gilt. Höher entfernt mehr, kann aber auch leise Teile der Stimme angreifen.','4–8 dB, Standard 6 dB.'],
@@ -1265,6 +1289,7 @@ function memoAsync(t,kind,i0,i1,afn){const a=t.ch[0];let m=MEMO.get(a);if(!m){m=
   if(m.has(k)){const v=m.get(k);return v&&v.pending?null:v}m.set(k,{pending:true});afn().then(v=>{m.set(k,v);updFxInfo()},()=>m.delete(k));return null}
 const FXP=lsGet('fxp',{});
 /* Standardwerte geändert (Nov 2026): gespeicherte ALTE Standardwerte einmalig auf die neuen setzen – selbst gewählte Werte bleiben */
+if(!lsGet('fxpMig5',false)){const e=FXP.enh;if(e){if(e.eq===true)e.eq=false;if(e.comp===true)e.comp=false}lsSet('fxp',FXP);lsSet('fxpMig5',true)}/* Sprache optimieren: Klang & Kompressor standardmäßig aus */
 if(!lsGet('fxpMig4',false)){for(const id of['fin','fout'])if(FXP[id]&&['s','lin','db'].includes(FXP[id].curve))FXP[id].curve='hear';lsSet('fxp',FXP);lsSet('fxpMig4',true);lsSet('fxpMig3',true)}/* Standard: Gleichmäßig (gehört) */
 if(!lsGet('fxpMig3',false)){for(const id of['fin','fout'])if(FXP[id]&&(FXP[id].curve==='s'||FXP[id].curve==='lin'))FXP[id].curve='db';lsSet('fxp',FXP);lsSet('fxpMig3',true)}/* neuer Standard: Linear (Lautstärke) */
 if(!lsGet('fxpMig1',false)){const M={gate:{hold:[200,250],rel:[120,150]},xgate:{hold:[250,300],rel:[150,180]}};for(const id in M)for(const k in M[id])if(FXP[id]&&FXP[id][k]===M[id][k][0])FXP[id][k]=M[id][k][1];lsSet('fxp',FXP);lsSet('fxpMig1',true)}
@@ -1357,6 +1382,19 @@ function wrapText(g,text,maxW,maxL){const out=[];for(const para of String(text).
   if(shown<total&&out.length){let s=out[out.length-1];while(s&&g.measureText(s+' …').width>maxW)s=s.slice(0,-1);out[out.length-1]=s+' …'}return out}
 function firstVisible(arr,t){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1;if(arr[m].a<t)lo=m+1;else hi=m}return lo}
 const normQ=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+/* ---- Sprecherfarbe je Untertitel: welche Spur spricht in dieser Zeit am deutlichsten? ----
+   Pegel je 10 ms und Sprach-/Hintergrundpegel je Spur (einmal gemessen, Seq ist unveränderlich). Bewertet wird, wie weit eine Spur über
+   ihrer eigenen Schwelle liegt (relativ zu ihrem Sprachpegel) – so gewinnt das eigene Mikrofon gegen mitgehörte Stimmen. */
+const SPKL=new WeakMap(),SPK=new Map(),SEQID=new WeakMap();let SEQN=0;
+const seqId=q=>{let v=SEQID.get(q);if(!v)SEQID.set(q,v=++SEQN);return v};
+function spkLevels(t){const k=t.ch[0];if(SPKL.has(k))return SPKL.get(k);SPKL.set(k,null);
+  frameLevels(t.ch,0,tLen(t)).then(L=>{SPKL.set(k,{L,st:levelStats(L)});drawLanes();renderTranscript()},()=>SPKL.delete(k));return null}
+function subSpeaker(it){const ts=S.tracks.filter(t=>tLen(t)&&!t.rec);if(ts.length<2)return null;
+  const key=it.a+':'+it.b+':'+ts.map(t=>t.id+'@'+t.off+'#'+seqId(t.ch[0])).join(','),c=SPK.get(it.id);if(c&&c.k===key)return c.t;
+  const fps=SR/GF();let best=null,bs=0;
+  for(const t of ts){const v=spkLevels(t);if(!v)return null;if(!v.st.ok)continue;const{L,st}=v,f0=Math.max(0,Math.floor((it.a-t.off)*fps)),f1=Math.min(L.length,Math.ceil((it.b-t.off)*fps));if(f1<=f0)continue;
+    const rng=Math.max(6,st.speech-st.thr);let sum=0;for(let f=f0;f<f1;f++)sum+=clamp((L[f]-st.thr)/rng,0,1.5);const sc=sum/Math.max(1,(it.b-it.a)*fps);if(sc>bs){bs=sc;best=t}}
+  const r=bs>.08?best:null;if(SPK.size>20000)SPK.clear();SPK.set(it.id,{k:key,t:r});return r}
 function drawLanes(){for(const l of TL){const r=LANES.get(l.key);if(!r)continue;const cv=r.cv,W=cv.clientWidth,H=cv.clientHeight;if(!W||!H)continue;const d=devicePixelRatio||1;
   if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d)}
   const g=cv.getContext('2d');g.setTransform(d,0,0,d,0,0);g.fillStyle='#0d0d0e';g.fillRect(0,0,W,H);
@@ -1367,12 +1405,13 @@ function drawLanes(){for(const l of TL){const r=LANES.get(l.key);if(!r)continue;
   const t0=S.view.t0,t1=t0+W/S.view.pps;let maxDur=0;if(!l.point)for(const it of arr)if(it.b-it.a>maxDur)maxDur=it.b-it.a;
   let i0=firstVisible(arr,t0-maxDur-1e-6);if(l.point)i0=Math.max(0,firstVisible(arr,t0)-1);
   for(let i=i0;i<arr.length;i++){const it=arr[i];if(it.a>t1)break;const xa=timeToX(it.a),sel=S.tsel&&S.tsel.key===l.key&&S.tsel.id===it.id,txt=it.text||(l.point?'':'…');
-    const dim=hitSet&&!hitSet.has(it.id);g.globalAlpha=dim?.3:1;let bx,bw;
+    const dim=hitSet&&!hitSet.has(it.id);g.globalAlpha=dim?.3:1;let bx,bw,fg=l.fg;
     if(l.point){const nx=i+1<arr.length?timeToX(arr[i+1].a):1e9;it._w=0;if(nx<0)continue;const room=nx-xa-4,tw=Math.max(8,Math.min(room,multi?Math.min(260,room):g.measureText(txt.split('\n')[0]).width+14));it._w=tw;bx=xa;bw=tw;
       g.fillStyle=sel?l.col:l.bg;g.beginPath();g.roundRect(xa,3,tw,H-6,[0,7,7,0]);g.fill();g.fillStyle=l.col;g.fillRect(Math.round(xa),0,1.5,H)}
-    else{const xb=Math.max(timeToX(it.b),xa+4);if(xb<0)continue;bx=xa;bw=xb-xa;g.fillStyle=sel?l.col:l.bg;g.beginPath();g.roundRect(xa,3,bw,H-6,6);g.fill()}
+    else{let xb=Math.max(timeToX(it.b),xa+4);const nx=i+1<arr.length?timeToX(arr[i+1].a):1e9;if(nx>xa+2&&xb>nx-1)xb=nx-1;/* mind. 1 px Abstand zum nächsten Eintrag */if(xb<0)continue;bx=xa;bw=xb-xa;const sp=l.key==='subs'?subSpeaker(it):null,sc=sp&&sp.color;/* Untertitel: Farbe der sprechenden Spur */
+      g.fillStyle=sel?(sc||l.col):(sc?sc+'3a':l.bg);g.beginPath();g.roundRect(xa,3,bw,H-6,6);g.fill();if(sc){if(!sel){g.save();g.clip();g.fillStyle=sc;g.fillRect(xa,3,3,H-6);g.restore()}fg='#f2f2f4'}}
     const x0=Math.max(bx,0),avail=Math.min(bx+bw,W)-x0-10;
-    if(avail>8){g.save();g.beginPath();g.rect(x0,0,avail+6,H);g.clip();g.fillStyle=sel?'#111':l.fg;
+    if(avail>8){g.save();g.beginPath();g.rect(x0,0,avail+6,H);g.clip();g.fillStyle=sel?'#111':fg;
       const lines=multi?wrapText(g,txt,avail,maxL):[txt.split('\n')[0]];const y0=multi?3+LH/2+1:H/2+.5;lines.forEach((s,k)=>g.fillText(s,x0+6,y0+k*LH));g.restore()}
     if(hitSet&&hitSet.has(it.id)){g.strokeStyle=it.id===curHit?'#ffffff':'#ffd54a';g.lineWidth=it.id===curHit?2:1.5;g.beginPath();g.roundRect(bx+.75,3.75,Math.max(4,bw-1.5),H-7.5,6);g.stroke()}
     g.globalAlpha=1}
@@ -1447,8 +1486,69 @@ function closeEditor(save){if(!ED)return;const e=ED,l=TLM[e.key];ED=null;$('#ted
   changedText()}
 /* ---- Untertitel-Einblendung & Kapitelliste ---- */
 let capLast=null,curMark=null;
-function updCaption(p){return;let s=null;if(S.capOn&&S.lanesOn.subs&&(P.on||R.on||P.paused))s=S.subs.find(x=>p>=x.a&&p<x.b);const txt=s?(s.text||''):'';if(txt!==capLast){capLast=txt;const c=$('#cap');if(txt)c.textContent=txt;c.classList.toggle('on',!!txt)}
+function updCaption(p){trCur(p);return;let s=null;if(S.capOn&&S.lanesOn.subs&&(P.on||R.on||P.paused))s=S.subs.find(x=>p>=x.a&&p<x.b);const txt=s?(s.text||''):'';if(txt!==capLast){capLast=txt;const c=$('#cap');if(txt)c.textContent=txt;c.classList.toggle('on',!!txt)}
   let cm=null;for(const m of S.marks)if(m.a<=p+1e-6)cm=m.id;if(cm!==curMark){curMark=cm;$$('#markList .mk').forEach(r=>r.classList.toggle('cur',+r.dataset.id===cm))}}
+/* ============ Transkript (Untertitel als Fließtext): mitlaufen, springen, suchen, Text markieren → Kommentar ============
+   Zeitpunkt einer Textstelle = Beginn des Untertitels + Anteil der Zeichen (Untertitel haben keine Wortzeiten). */
+let trSig='',trScrollT=0,trCurId=null,TRSEL=null;
+const trMulti=()=>S.tracks.filter(t=>tLen(t)&&!t.rec).length>1;
+function trRanges(s,q){const tx=s.text||'',n=tx.length,R=[];if(!n)return R;const D=Math.max(1e-6,s.b-s.a),c=t=>clamp(Math.round((t-s.a)/D*n),0,n);
+  for(const nt of S.notes){if(nt.b<=s.a||nt.a>=s.b)continue;let c0=c(Math.max(nt.a,s.a)),c1=c(Math.min(nt.b,s.b));
+    while(c0>0&&!/\s/.test(tx[c0-1]))c0--;while(c1<n&&!/\s/.test(tx[c1]))c1++;if(c1<=c0)c1=Math.min(n,c0+1);R.push({c0,c1,nt,last:nt.b<=s.b+1e-6})}
+  if(q){const lo=tx.toLowerCase();let i=lo.indexOf(q);while(i>=0){R.push({c0:i,c1:i+q.length,hit:true});i=lo.indexOf(q,i+q.length)}}return R}
+const noteEmo=t=>{const m=(t||'').match(/^\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic})*/u);return m?m[0]:'💬'};
+function trText(s,q){const tx=s.text||'',R=trRanges(s,q),cut=new Set([0,tx.length]);for(const r of R){cut.add(r.c0);cut.add(r.c1)}const pts=[...cut].sort((a,b)=>a-b),out=[];
+  for(let k=0;k+1<pts.length;k++){const a=pts[k],b=pts[k+1];if(b<=a)continue;const cov=R.filter(r=>r.c0<=a&&r.c1>=b),nts=cov.filter(r=>r.nt),sp=el('span',(nts.length?'nt ':'')+(cov.some(r=>r.hit)?'hit':''));
+    sp.textContent=tx.slice(a,b);sp.dataset.o=a;if(nts.length){sp.dataset.nid=nts[0].nt.id;sp.dataset.tip=nts.map(r=>esc(r.nt.text||'(leerer Kommentar)')).join('<br>')+'<span class="def">Klick: Kommentar bearbeiten</span>'}out.push(sp);
+    for(const r of nts)if(r.last&&r.c1===b){const e=el('span','ne',noteEmo(r.nt.text));e.dataset.nid=r.nt.id;e.dataset.tip=esc(r.nt.text||'(leerer Kommentar)')+'<span class="def">Klick: bearbeiten</span>';out.push(e)}}
+  return out}
+function renderTranscript(force){const box=$('#trList');if(!box)return;const q=($('#trQ').value||'').trim().toLowerCase(),subs=S.subs,multi=trMulti();
+  const sig=q+'#'+subs.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+S.notes.map(x=>x.id+':'+x.a+':'+x.b+':'+x.text).join('|')+'#'+(multi?subs.map(x=>{const t=subSpeaker(x);return t?t.id+t.color+t.name:'-'}).join(','):'');
+  if(!force&&sig===trSig)return;const sl=getSelection();if(!force&&sl&&!sl.isCollapsed&&box.contains(sl.anchorNode))return;/* nicht während markiert wird */
+  trSig=sig;const st=box.scrollTop;box.innerHTML='';trCurId=null;let hits=0;
+  if(!subs.length){$('#trCount').textContent='';$('#trQ').style.display='none';box.innerHTML='<div class="hint none">Noch keine Untertitel. Über „Importieren …“ (Kapitel &amp; Text) eine SRT- oder VTT-Datei laden – z. B. das Transkript aus Riverside. Dann steht hier der ganze Text: mitlesen, springen, Stellen markieren und kommentieren.</div>';return}
+  $('#trQ').style.display='';let prev=null;
+  for(const x of subs){if(q&&!(x.text||'').toLowerCase().includes(q))continue;hits++;const sp=multi?subSpeaker(x):null,r=el('div','trl');r.dataset.id=x.id;if(sp)r.style.setProperty('--sc',sp.color);
+    const showSp=sp&&(q||!prev||prev!==sp.id);prev=sp?sp.id:null;
+    r.innerHTML=`<div class="trm"><span class="tm">${fmtChap(x.a)}</span>${showSp?`<span class="sp" style="color:${sp.color}">${esc(sp.name)}</span>`:''}<span class="ed">${I.pen}</span></div><div class="tt"></div>`;
+    $('.tm',r).dataset.tip='Hierhin springen';$('.ed',r).dataset.tip='Text bearbeiten';$('.tt',r).append(...trText(x,q));box.append(r)}
+  $('#trCount').textContent=q?`${hits} Treffer`:`${subs.length} Zeilen`;box.scrollTop=st;trCur(pos(),true)}
+function trCur(p,quiet){const box=$('#trList');if(!box||!S.subs.length)return;let lo=0,hi=S.subs.length-1,f=null;while(lo<=hi){const m=(lo+hi)>>1,x=S.subs[m];if(x.a<=p+1e-6){f=x;lo=m+1}else hi=m-1}
+  const id=f&&p<f.b+.05?f.id:null;if(id===trCurId)return;trCurId=id;for(const r of box.querySelectorAll('.trl.cur'))r.classList.remove('cur');if(id==null)return;
+  const r=box.querySelector(`.trl[data-id="${id}"]`);if(!r)return;r.classList.add('cur');
+  if(!quiet&&(P.on||R.on)&&Date.now()-trScrollT>2500){const br=box.getBoundingClientRect(),rr=r.getBoundingClientRect();if(rr.top<br.top||rr.bottom>br.bottom)box.scrollTop+=rr.top-br.top-br.height*.3}}
+/* Zeichenposition → Zeit */
+function trPoint(node,off){const tt=(node.nodeType===3?node.parentElement:node)?.closest('.tt');if(!tt)return null;const row=tt.closest('.trl'),x=S.subs.find(q=>q.id===+row.dataset.id);if(!x)return null;
+  let c;const sp=node.nodeType===3?node.parentElement:null;if(sp&&sp.dataset.o!=null)c=+sp.dataset.o+off;else if(node===tt){const kids=[...tt.childNodes].slice(0,off).filter(k=>k.dataset&&k.dataset.o!=null);c=kids.length?+kids[kids.length-1].dataset.o+kids[kids.length-1].textContent.length:0}
+  else if(node.classList&&node.classList.contains('ne'))c=(x.text||'').length;else c=sp&&sp.classList.contains('ne')?(x.text||'').length:0;
+  const n=Math.max(1,(x.text||'').length);return x.a+(x.b-x.a)*clamp(c,0,n)/n}
+function trHasSel(){const sl=getSelection();return !!sl&&!sl.isCollapsed&&$('#trList').contains(sl.anchorNode)}
+function trSelRange(){const sl=getSelection();if(!sl||sl.isCollapsed||!sl.rangeCount)return null;const rg=sl.getRangeAt(0),box=$('#trList');if(!box.contains(rg.startContainer)||!box.contains(rg.endContainer))return null;
+  let a=trPoint(rg.startContainer,rg.startOffset),b=trPoint(rg.endContainer,rg.endOffset);
+  if(a==null){const r=(rg.startContainer.nodeType===3?rg.startContainer.parentElement:rg.startContainer).closest('.trl')||box.querySelector('.trl');a=r?S.subs.find(q=>q.id===+r.dataset.id)?.a:null}
+  if(b==null){const r=(rg.endContainer.nodeType===3?rg.endContainer.parentElement:rg.endContainer).closest('.trl');b=r?S.subs.find(q=>q.id===+r.dataset.id)?.b:null}
+  if(a==null||b==null)return null;if(b<a)[a,b]=[b,a];if(b-a<.05)b=a+.05;return{a,b,rect:rg.getBoundingClientRect(),text:sl.toString().trim()}}
+function trBar(){const bar=$('#trBar'),r=trSelRange();TRSEL=r;if(!r||!r.text){bar.classList.remove('on');return}
+  bar.innerHTML='';const add=(html,tip,fn,cls)=>{const b=el('button',cls||'',html);b.dataset.tip=tip;b.addEventListener('pointerdown',e=>e.preventDefault());b.onclick=()=>{const s=TRSEL;if(!s)return;fn(s)};bar.append(b);return b};
+  for(const x of EMO)add(esc(x),`Als <b>${esc(x)}</b> kommentieren`,s=>trComment(s,x));
+  add('💬','Kommentar schreiben …',s=>trComment(s,null));bar.append(el('div','sep'));
+  add(I.play,'Diese Stelle anhören',s=>{trBarOff();play(s.a,s.b)});
+  add('Auswählen','Stelle in den Spuren auswählen – dann z. B. ausblenden (Strg+Shift+X), löschen oder einen Effekt anwenden',s=>{trBarOff();if(!S.tracks.some(t=>t.sel))S.tracks.forEach(t=>t.sel=true);setSel(s.a,s.b);ensureVisible(s.a);updRows();invalidate();updUI();toast(`Ausgewählt: ${fmtT(s.a)} – ${fmtT(s.b)} (${nf(s.b-s.a,1)} s)`)},'t');
+  bar.classList.add('on');const bw=bar.offsetWidth,bh=bar.offsetHeight;let x=r.rect.left+r.rect.width/2-bw/2,y=r.rect.top-bh-8;if(y<8)y=r.rect.bottom+8;
+  bar.style.left=clamp(x,8,innerWidth-bw-8)+'px';bar.style.top=y+'px'}
+function trBarOff(){$('#trBar').classList.remove('on');TRSEL=null;const sl=getSelection();if(sl&&trHasSel())sl.removeAllRanges()}
+function trComment(s,emo){trBarOff();if(!S.lanesOn.notes){S.lanesOn.notes=true;lsSet('lanes',S.lanesOn);renderLanes()}ensureVisible(s.a);
+  if(emo){addText('notes',s.a,s.b,emo,false);toast(`Kommentar ${emo} gesetzt · ${fmtT(s.a)}`,2500)}else addText('notes',s.a,s.b,'',true)}
+function initTranscript(){const box=$('#trList'),q=$('#trQ');if(!box)return;if(!$('#trBar')){const b=el('div');b.id='trBar';document.body.append(b)}
+  q.oninput=()=>renderTranscript();q.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape'){q.value='';renderTranscript();q.blur()}else if(e.key==='Enter'){const r=box.querySelector('.trl');if(r){const x=S.subs.find(z=>z.id===+r.dataset.id);if(x){moveCur(x.a);trCur(x.a)}}}};
+  box.addEventListener('wheel',()=>trScrollT=Date.now(),{passive:true});box.addEventListener('pointerdown',()=>trScrollT=Date.now());
+  box.addEventListener('click',e=>{const row=e.target.closest('.trl');if(!row)return;const x=S.subs.find(z=>z.id===+row.dataset.id);if(!x)return;
+    const nid=e.target.closest('[data-nid]');if(nid&&!trHasSel()){const nt=S.notes.find(z=>z.id===+nid.dataset.nid);if(nt){ensureVisible(nt.a);moveCur(nt.a);startEdit('notes',nt)}return}
+    if(e.target.closest('.ed')){ensureVisible(x.a);startEdit('subs',x);return}
+    if(trHasSel())return;moveCur(x.a);trCur(x.a,true)});
+  document.addEventListener('selectionchange',()=>{clearTimeout(trBar.t);trBar.t=setTimeout(trBar,120)});
+  box.addEventListener('scroll',()=>{if($('#trBar').classList.contains('on'))trBar()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#trBar').classList.contains('on')){e.stopPropagation();trBarOff()}},true)}
 function renderTextUI(){const ch=$('#laneChips');if(!ch)return;ch.innerHTML='';
   for(const l of TL){const b=el('button',S.lanesOn[l.key]?'on':'',l.name+(S[l.key].length?` <span style="opacity:.6">${S[l.key].length}</span>`:''));b.title=(S.lanesOn[l.key]?'Spur ausblenden':'Spur einblenden');b.onclick=()=>toggleLane(l.key,!S.lanesOn[l.key]);ch.append(b)}
   
@@ -1461,7 +1561,7 @@ function renderTextUI(){const ch=$('#laneChips');if(!ch)return;ch.innerHTML='';
       $('.x',r).onclick=()=>delText('marks',m.id);ml.append(r)}curMark=null}
   const mc=S.marks.length,nc=S.notes.length,sc=S.subs.length;
   $('#textCounts').innerHTML=mc+nc+sc?`${mc} Kapitel · ${nc} ${nc===1?'Kommentar':'Kommentare'} · ${sc} Untertitel`:'Noch nichts angelegt. <kbd>B</kbd> setzt ein Kapitel an der Abspielposition – auch während der Wiedergabe. In den schmalen Spuren unter der Zeitleiste ziehen, um Kommentare oder Untertitel für einen Bereich anzulegen.';
-  updCaption(pos())}
+  updCaption(pos());renderTranscript()}
 /* ---- Import / Export von Text ---- */
 function srtT(t,sep){const ms=Math.round(Math.max(0,t)*1000),h=Math.floor(ms/3600000),m=Math.floor(ms/60000)%60,s=Math.floor(ms/1000)%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}${sep}${String(ms%1000).padStart(3,'0')}`}
 const chapText=()=>S.marks.map(m=>fmtChap(m.a)+' '+(m.text||'Kapitel')).join('\n');
@@ -1588,9 +1688,9 @@ function hidMenu(gid,x,y){ctxMenu(x,y,[['↺ Wieder einblenden',()=>restoreHid(g
 let hidSig='';
 function renderHid(){const box=$('#hidList');if(!box)return;const groups=new Map();for(const t of S.tracks)for(const h of t.hid||[]){if(!groups.has(h.gid))groups.set(h.gid,{h,t,names:[]});groups.get(h.gid).names.push(t.name)}
   const sig=[...groups.values()].map(g=>g.h.gid+'@'+(g.t.off+g.h.at).toFixed(3)+':'+g.names.join('|')).join(',');if(sig===hidSig)return;hidSig=sig;box.innerHTML='';
-  if(!groups.size){box.style.display='none';return}box.style.display='';const hh=el('div','hh','Ausgeblendete Passagen');box.append(hh);
-  const list=[...groups.values()].sort((x,y)=>(x.t.off+x.h.at)-(y.t.off+y.h.at)),nu=list.filter(g=>g.h.tag==='umm').length;
-  if(nu>1){const ab=el('span','all',`↺ alle ${nu}`);ab.title=`Alle ${nu} ausgeblendeten Ähms auf einmal zurückholen (Strg+Z macht es rückgängig)`;ab.onclick=()=>restoreTag('umm');const pb=el('span','all pl',I.play);pb.title='Alle Ähms hintereinander anhören (nochmal klicken = Stopp)';pb.onclick=()=>previewTag('umm');hh.append(pb,ab)}
+  const sec=$('#secHid');if(!groups.size){sec.style.display='none';return}sec.style.display='';
+  const list=[...groups.values()].sort((x,y)=>(x.t.off+x.h.at)-(y.t.off+y.h.at)),nu=list.filter(g=>g.h.tag==='umm').length;$('#hidCount').textContent=list.length;
+  if(nu>1){const hh=el('div','hh',`${nu} Ähms`);box.append(hh);const ab=el('span','all',`↺ alle ${nu}`);ab.title=`Alle ${nu} ausgeblendeten Ähms auf einmal zurückholen (Strg+Z macht es rückgängig)`;ab.onclick=()=>restoreTag('umm');const pb=el('span','all pl',I.play);pb.title='Alle Ähms hintereinander anhören (nochmal klicken = Stopp)';pb.onclick=()=>previewTag('umm');hh.append(pb,ab)}
   for(const g of list){const d=el('div','hr');d.dataset.gid=g.h.gid;d.innerHTML=`<span class="eo">${I.eyeoff}</span><span class="tx"></span><span class="nw"></span><span class="b">↺</span><span class="b">▶</span><span class="b del">${I.trash}</span>`;
     $('.tx',d).textContent=`${g.h.tag==='umm'?'Ähm · ':''}${fmtT(g.t.off+g.h.at)} · ${nf(g.h.len,1)} s · ${g.names.join(', ')}`;
     const[bR,bP,bD]=d.querySelectorAll('.b');bR.title='Wieder einblenden (an der gelben Markierung)';bP.title='Anhören';bD.title='Endgültig löschen';
@@ -2399,6 +2499,7 @@ window.addEventListener('drop',e=>{e.preventDefault();dragN=0;document.body.clas
 /* ============================== Tastatur ============================== */
 document.addEventListener('keydown',e=>{const tg=e.target instanceof Element?e.target:document.body;
   if(tg.matches('input[type=text],input[type=number],textarea,select')||tg.isContentEditable)return;
+  if((e.ctrlKey||e.metaKey)&&/^[ca]$/i.test(e.key)&&trHasSel())return;/* Text im Transkript kopieren */
   if(e.key==='?'&&!e.ctrlKey){if(!$('#modal').classList.contains('on')){e.preventDefault();showHelp()}return}
   if($('#modal').classList.contains('on')){if(e.key==='Escape'){e.preventDefault();closeModal()}return}
   if(tg.matches('input[type=range]')&&/^(Arrow|Home|End|Page)/.test(e.key))return;
@@ -2467,7 +2568,7 @@ tedTA().addEventListener('blur',()=>setTimeout(()=>{if(ED&&document.activeElemen
     $('#mobOk').onclick=()=>{try{sessionStorage.setItem('pe-mobile-ok','1')}catch(e){}closeModal()}},300)})();
 /* Safari/Firefox: einmal sagen, was dort fehlt (Rest funktioniert) */
 (()=>{const miss=[];if(!window.showDirectoryPicker)miss.push('automatische Sicherung in einen Ordner');if(!window.showSaveFilePicker)miss.push('der „Speichern unter“-Dialog (Dateien landen im Download-Ordner)');if(!(window.AudioContext&&AudioContext.prototype.setSinkId))miss.push('die Wahl des Ausgabegeräts');if(miss.length&&!lsGet('browserHint',false)){lsSet('browserHint',true);setTimeout(()=>toast('Hinweis: In diesem Browser fehlen '+miss.join(', ')+'. Alles andere funktioniert – für den vollen Umfang Chrome oder Edge verwenden.',10000),1500)}})();
-renderLanes();buildFx();renderEmo();refreshDevices().then(()=>{if(cfg.outDev)setOutput(cfg.outDev,true)});
+renderLanes();buildFx();renderEmo();initTranscript();refreshDevices().then(()=>{if(cfg.outDev)setOutput(cfg.outDev,true)});
 new ResizeObserver(()=>{clampView();invalidate()}).observe($('#center'));
 renderTracks();updTransport();updUI();requestAnimationFrame(meterLoop);checkRestore();updMon();S.dirty=false;updTitle();bkInit();
 </script>

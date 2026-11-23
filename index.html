@@ -549,6 +549,16 @@ function envKeep(t,a,b){const e=t.env;if(!e||!e.length)return null;const L=x=>en
     const now=[envDbAt(t,c-.25),envDbAt(t,c-.001),envDbAt(t,c),envDbAt(t,c+.25)];if(now.every((v,i)=>Math.abs(v-pr[i])<.05))return;/* nichts verändert */
     const tg=tag?{hf:tag}:{},add=[];if(c>.002)add.push({t:c-.001,db:pr[1],...tg});if(c<len-.001)add.push({t:c,db:pr[2],...tg});
     t.env=E.filter(q=>!(q.t>c-.0015&&q.t<c+.0005)).concat(add).sort((x,y)=>x.t-y.t)}}
+/* Hüllkurve einer Passage mitnehmen: Wert am Anfang/Ende + Punkte dazwischen (relativ zum Anfang) */
+function envSnap(t,a,b){const e=t.env||[],la=a-t.off,lb=b-t.off;return{v0:envDbAt(t,la),v1:envDbAt(t,lb),pts:e.filter(q=>q.t>la+1e-6&&q.t<lb-1e-6).map(q=>({t:q.t-la,db:q.db})),L:b-a,has:e.length>0}}
+/* Eingefügte Passage [P,P+L] bekommt ihren eigenen Verlauf; links/rechts bleibt die Hüllkurve der Zielspur auf vL/vR (Haltepunkte, 1 ms) */
+function envPut(t,P,sn,vL,vR){const len=tLen(t)/SR,l0=P-t.off,l1=l0+sn.L,E=(t.env||[]).filter(q=>!(q.t>l0-.0015&&q.t<l1+.0015)),add=[];
+  if(l0>.002)add.push({t:l0-.001,db:vL});add.push({t:Math.max(0,l0),db:sn.v0},...sn.pts.map(q=>({t:l0+q.t,db:q.db})),{t:l1,db:sn.v1});if(l1<len-.002)add.push({t:l1+.001,db:vR});
+  t.env=E.concat(add).filter(q=>q.t>=-.001&&q.t<=len+.001).sort((x,y)=>x.t-y.t)}
+/* Haltepunkte an einer Stelle: links vL, rechts vR */
+function envPinAt(t,x,vL,vR){const len=tLen(t)/SR,l=x-t.off;if(!(t.env||[]).length||l<=.002||l>=len-.002)return;t.env=t.env.filter(q=>!(q.t>l-.0015&&q.t<l+.0005)).concat([{t:l-.001,db:vL},{t:l,db:vR}]).sort((p,q)=>p.t-q.t)}
+/* Stille einfügen (Sync): Hüllkurve links/rechts unverändert lassen */
+function envIns(t,P,Ls,fn){const has=(t.env||[]).length,vL=has?envDbAt(t,P-t.off-.0005):0,vR=has?envDbAt(t,P-t.off+.0005):0;fn();if(has)envPut(t,P,{v0:vL,v1:vR,pts:[],L:Ls},vL,vR)}
 function removeTime(t,a,b,raw){const n=tLen(t),off0=t.off;const i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1>i0)t.ch=spliceCh(t.ch,i0,i1,null);if(a<t.off)t.off-=Math.min(b,t.off)-a;if(!raw)remapCuts(t,off0,x=>x<=a?x:x>=b?x-(b-a):a,x=>x>a+1e-9&&x<b-1e-9)}
 function insertSilence(t,at,len,raw){const n=tLen(t),off0=t.off;if(!n||len<=0)return;if(at<=t.off+1e-9)t.off+=len/SR;else{const p=Math.round((at-t.off)*SR);if(p>=n)return;t.ch=spliceCh(t.ch,p,p,t.ch.map(()=>Seq.zeros(len)))}if(!raw)remapCuts(t,off0,x=>x>at+1e-9?x+len/SR:x)}
 function insertAt(t,at,chs,raw){const n=tLen(t),off0=t.off,L=chs[0].length/SR;if(!n){t.off=at;t.ch=chs.map(sq);return}chs=matchCh(chs,t.ch.length);const p=Math.round((at-t.off)*SR);
@@ -1378,10 +1388,10 @@ function fmtChap(t){const s=Math.floor(t+1e-6),h=Math.floor(s/3600),m=Math.floor
 S.laneH=lsGet('laneH',{});S.search=null;
 function renderLanes(){const box=$('#tlanes');box.innerHTML='';LANES.clear();
   for(const l of TL){if(!S.lanesOn[l.key])continue;const row=el('div','tlr');row.dataset.k=l.key;row.style.height=(S.laneH[l.key]||22)+'px';
-    row.innerHTML=`<div class="tlh"><i style="background:${l.col}"></i><span>${l.name}</span><button class="sr" title="In ${l.name} suchen">${I.search}</button><button class="ad" title="${l.one} hinzufügen (${l.k})">${I.plus}</button><button class="hd" title="Spur ausblenden">${I.x}</button></div><canvas class="tlc"></canvas><div class="lrz" title="Ziehen: Höhe ändern (größer = mehrzeilig) · Doppelklick: klein/groß"></div>`;
+    row.innerHTML=`<div class="tlh"><i style="background:${l.col}"></i><span>${l.name}</span><button class="sr" title="In ${l.name} suchen">${I.search}</button><button class="ad" title="${l.one} hinzufügen (${l.k})">${I.plus}</button><button class="hd" title="Spur ausblenden">${I.x}</button></div><canvas class="tlc"></canvas><div class="lrz" title="Ziehen: Höhe ändern (größer = mehrzeilig) · Doppelklick: eine Zeile ↔ vier Zeilen"></div>`;
     const cv=$('canvas',row);$('.ad',row).onclick=()=>l.key==='subs'?subKey():quickAdd(l.key);$('.hd',row).onclick=()=>toggleLane(l.key,false);$('.sr',row).onclick=()=>openSearch(l.key);
     cv.addEventListener('pointerdown',e=>laneDown(l,e));cv.addEventListener('pointermove',e=>laneHover(l,e));cv.addEventListener('contextmenu',e=>laneCtx(l,e));
-    const rz=$('.lrz',row);rz.addEventListener('pointerdown',e=>laneResize(l,row,e));rz.addEventListener('dblclick',()=>{S.laneH[l.key]=(S.laneH[l.key]||22)>30?22:72;lsSet('laneH',S.laneH);row.style.height=S.laneH[l.key]+'px';clampView();invalidate()});
+    const rz=$('.lrz',row);rz.addEventListener('pointerdown',e=>laneResize(l,row,e));rz.addEventListener('dblclick',()=>{S.laneH[l.key]=(S.laneH[l.key]||22)>30?22:LANE4;lsSet('laneH',S.laneH);row.style.height=S.laneH[l.key]+'px';clampView();invalidate()});
     LANES.set(l.key,{row,cv});box.append(row)}
   renderTextUI();clampView();invalidate()}
 function laneResize(l,row,e){e.preventDefault();e.stopPropagation();const tg=e.currentTarget,sy=e.clientY,sh=S.laneH[l.key]||22;tg.setPointerCapture(e.pointerId);
@@ -1634,8 +1644,10 @@ function openTextImport(){modal(`<h3>Text importieren</h3><div class="fld"><labe
   $('#tiFile').onclick=()=>{const f=el('input');f.type='file';f.accept='.srt,.vtt,.txt,.json';f.onchange=async()=>{const x=f.files[0];if(x){let s=await x.text();if(s.includes('�')){try{s=new TextDecoder('windows-1252').decode(await x.arrayBuffer())}catch{}}ta.value=s;if(/\.(srt|vtt)$/i.test(x.name))$('#tiAs').value='subs';info()}};f.click()};
   $('#tiC').onclick=closeModal;
   $('#tiGo').onclick=()=>{const r=parseText(ta.value);if(!r.items.length)return toast('Nichts erkannt');let k=$('#tiAs').value;if(k==='auto')k=r.kind;closeModal();addParsed(r,k,$('#tiRep').checked,'')}}
+const LANE4=4*13+8;/* Höhe für vier Textzeilen */
 function addParsed(r,k,replace,src){const l=TLM[k];pushUndo(l.name+' importieren');if(replace)S[k]=[];
   for(const it of r.items)S[k].push({id:MID++,a:Math.max(0,it.a),b:l.point?Math.max(0,it.a):(it.b>it.a?it.b:it.a+2.5),text:it.text});sortT(k);
+  if(k==='subs'&&(S.laneH.subs||22)<LANE4){S.laneH.subs=LANE4;lsSet('laneH',S.laneH);if(S.lanesOn.subs)renderLanes()}/* Untertitel: standardmäßig vier Zeilen */
   if(!S.lanesOn[k]){S.lanesOn[k]=true;lsSet('lanes',S.lanesOn);renderLanes()}changedText();toast(`${r.items.length} × ${l.name} importiert${src?' aus „'+src+'“':''} (${r.fmt})`,3500)}
 async function importTextFile(f){let txt=await f.text();if(txt.includes('�')){try{txt=new TextDecoder('windows-1252').decode(await f.arrayBuffer())}catch{}}/* ältere SRT-Dateien sind oft ANSI-kodiert */
   const r=parseText(txt);if(!r.items.length)return toast(`„${f.name}“: keine Zeitangaben erkannt`,4000);const k=/\.(srt|vtt)$/i.test(f.name)?'subs':r.kind;addParsed(r,k,false,f.name)}
@@ -1655,7 +1667,7 @@ const editable=()=>!S.busy&&!R.on;
 /* Sync: alle Spuren – außer gesperrte, die nicht ausdrücklich gewählt sind */
 const syncSet=ts=>S.sync?S.tracks.filter(t=>!t.lock||ts.includes(t)):ts;
 function opCopy(silent){const ts=targets();if(!ts)return false;if(!hasSel()){toast('Erst einen Bereich auswählen');return false}
-  S.clip=ts.map(t=>{const[i0,i1]=trackRange(t);return t.ch.map(s=>s.sub(i0,i1))}).filter(c=>c[0].length);if(!S.clip.length){S.clip=null;toast('Bereich ist leer');return false}
+  {const pr=ts.map(t=>{const[i0,i1]=trackRange(t);return[t.ch.map(s=>s.sub(i0,i1)),envSnap(t,t.off+i0/SR,t.off+i1/SR)]}).filter(x=>x[0][0].length);S.clip=pr.map(x=>x[0]);S.clipEnv=pr.map(x=>x[1])}if(!S.clip.length){S.clip=null;toast('Bereich ist leer');return false}
   if(silent!==true)toast('Kopiert · '+nf(S.sel.b-S.sel.a,2)+' s');updUI();return true}
 function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');stopAll();pushUndo(typeof label==='string'?label:'Löschen');
   const{a,b}=S.sel;logOp(syncSet(ts),{k:'del',a,b});for(const t of syncSet(ts)){const keep=envKeep(t,a,b);removeTime(t,a,b);if(keep)keep()}shiftTextDel(a,b);setSel(a,a);changed()}
@@ -1733,11 +1745,13 @@ function opCut(){if(!editable())return;if(opCopy(true))opDelete('Ausschneiden')}
 function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage ist leer');stopAll();pushUndo('Einfügen');
   let ts=S.tracks.filter(t=>t.sel);if(!ts.length&&byId(S.focus))ts=[byId(S.focus)];const shTxt=true;
   {const lp={k:'paste',a:S.sel.a,b:hasSel()?S.sel.b:S.sel.a,len:r4(Math.max(...S.clip.map(c=>c[0].length))/SR)};logOp(ts,lp);logOp(syncSet(ts).filter(x=>!ts.includes(x)),{...lp,z:1})}
-  if(hasSel()){const{a,b}=S.sel;for(const t of syncSet(ts))removeTime(t,a,b);if(shTxt)shiftTextDel(a,b)}
+  if(hasSel()){const{a,b}=S.sel;for(const t of syncSet(ts)){const keep=envKeep(t,a,b);removeTime(t,a,b);if(keep)keep()}if(shTxt)shiftTextDel(a,b)}
   const at=S.sel.a,len=Math.max(...S.clip.map(c=>c[0].length));let struct=false;if(shTxt)shiftTextIns(at,len/SR);
   const monoW=S.clip.some((chs,i)=>ts[i]&&tLen(ts[i])&&chs.length>ts[i].ch.length);/* Stereo in Mono-Spur → Hinweis */
-  S.clip.forEach((chs,i)=>{let t=ts[i];if(!t){t=newTrack({name:'Eingefügt',off:at,ch:chs.slice(),sel:true});S.tracks.push(t);ts.push(t);struct=true}else insertAt(t,at,chs)});
-  if(S.sync)for(const t of S.tracks)if(!ts.includes(t)&&!t.lock)insertSilence(t,at,len);
+  S.clip.forEach((chs,i)=>{let t=ts[i];const sn=S.clipEnv&&S.clipEnv[i]?{...S.clipEnv[i],L:chs[0].length/SR}:null;/* Hüllkurve der kopierten Passage */
+    if(!t){t=newTrack({name:'Eingefügt',off:at,ch:chs.slice(),sel:true});if(sn&&sn.has)t.env=[{t:0,db:sn.v0},...sn.pts.map(q=>({...q})),{t:sn.L,db:sn.v1}];S.tracks.push(t);ts.push(t);struct=true}
+    else{const had=(t.env||[]).length,vL=had?envDbAt(t,at-t.off-.0005):0,vR=had?envDbAt(t,at-t.off+.0005):0;insertAt(t,at,chs);if(sn&&(had||sn.has))envPut(t,at,sn,vL,vR)}});
+  if(S.sync)for(const t of S.tracks)if(!ts.includes(t)&&!t.lock)envIns(t,at,len/SR,()=>insertSilence(t,at,len));
   setSel(at,at+len/SR);changed(struct);if(monoW)toast('Eingefügt · ⚠ Stereo wurde in Mono umgewandelt (Zielspur ist Mono)',5000)}
 /* Stille: Hüllkurve in der Markierung auf stumm setzen (zerstörungsfrei, kurze Rampen gegen Knacken) – rückgängig per Hüllkurve oder Strg+Z */
 function envSilenceRange(t,a,b){const len=tLen(t)/SR;a=clamp(a,0,len);b=clamp(b,0,len);if(b-a<.002)return false;const r=Math.min(.005,(b-a)/4),va=envDbAt(t,a),vb=envDbAt(t,b),out=(t.env||[]).filter(q=>q.t<a-1e-6||q.t>b+1e-6);
@@ -1917,7 +1931,10 @@ function moveCore(a,b,T,aff){const L=b-a,NL=Math.round(L*SR);if(NL<1||Math.abs(T
   const F=Math.min(NL,...st.map(o=>gapAt(o.t,T,NL))),ext=(NL-F)/SR,fe=T+F/SR;
   const map=x=>{if(x>=a-1e-9&&x<=b+1e-9)return T+(x-a);const u=x>b?x-L:x;return u>=fe-1e-9&&u>T+1e-9?u+ext:u};
   for(const o of st){const t=o.t;if(o.has)insertFill(t,T,o.seg,F);else if(ext>0)insertSilence(t,T,Math.round(ext*SR),true);
-    t.cuts=o.cuts0;t.env=o.env0;remapCuts(t,o.off0,map);clrFromAbs(t,aIns(aDel(o.rest,T,T+F/SR),T,L,o.pcs));const len=tLen(t)/SR,c2=t.cuts.slice(),gap=a<T?a:a+L;/* gap = Stelle, an der sich die Lücke geschlossen hat */
+    t.cuts=o.cuts0;t.env=o.env0;remapCuts(t,o.off0,map);
+    if(o.env0.length){/* Hüllkurve: Passage behält ihren Verlauf, an der Zielstelle und an der geschlossenen Lücke bleibt die Umgebung unverändert */
+      const tmp={env:o.env0},V=x=>envDbAt(tmp,x-o.off0),toO=u=>u<a?u:u+L,sn={v0:V(a),v1:V(b),pts:o.env0.filter(q=>q.t+o.off0>a+1e-6&&q.t+o.off0<b-1e-6).map(q=>({t:q.t+o.off0-a,db:q.db})),L};
+      const gapF=a>=fe-1e-9&&a>T+1e-9?a+ext:a;envPinAt(t,gapF,V(a-.0005),V(b+.0005));envPut(t,T,sn,V(toO(T)-.0005),V(toO(fe)+.0005))}clrFromAbs(t,aIns(aDel(o.rest,T,T+F/SR),T,L,o.pcs));const len=tLen(t)/SR,c2=t.cuts.slice(),gap=a<T?a:a+L;/* gap = Stelle, an der sich die Lücke geschlossen hat */
     for(const p of[gap,T,T+L]){const l=p-t.off;if(o.has&&l>.001&&l<len-.001&&!c2.some(x=>Math.abs(x-l)<.002))c2.push(l)}t.cuts=c2.sort((x,y)=>x-y)}
   map.filled=F/SR;return map}
 function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b,L=b-a,aff=S.sync?S.tracks.filter(x=>tLen(x)&&(!x.lock||x.sel)):S.tracks.filter(x=>x.sel&&tLen(x));if(!aff.length||L<=0)return;
@@ -1958,19 +1975,20 @@ function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b
   document.addEventListener('keydown',esc,true);tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
 
 /* Passage [a,b] aus src herausnehmen (Lücke schließt sich) und in dst bei Zeit P einfügen (dort wird Platz gemacht). dst='new' → neue Spur darunter */
-function moveAcross(src,a,b,dst,P){const NL=Math.round((b-a)*SR),L=NL/SR;if(NL<1)return;stopAll();pushUndo('Passage in andere Spur verschieben');
+function moveAcross(src,a,b,dst,P){const NL=Math.round((b-a)*SR),L=NL/SR;if(NL<1)return;stopAll();pushUndo('Passage in andere Spur verschieben');const sn={...envSnap(src,a,b),L};/* Hüllkurve der Passage wandert mit */
   const n=tLen(src),s0=Math.round((a-src.off)*SR),pre=clamp(-s0,0,NL),seg=src.ch.map(s=>{const body=s.sub(Math.max(0,s0),Math.min(n,s0+NL));return Seq.concat([Seq.zeros(pre),body,Seq.zeros(NL-pre-body.length)])});
   const mkCut=(t,pts)=>{const len=tLen(t)/SR,c=(t.cuts||[]).slice();for(const p of pts){const l=p-t.off;if(l>.001&&l<len-.001&&!c.some(x=>Math.abs(x-l)<.002))c.push(l)}t.cuts=c.sort((x,y)=>x-y)};
   /* Mit Sync: Quelle behält Stille (nichts rückt nach), Ziel macht Platz, alle übrigen nicht gesperrten Spuren bekommen dort eine Lücke → der Rest bleibt synchron */
   const sync=S.sync&&dst!=='new',srcAbs=clrAbs(src);
   if(sync){const i0=clamp(s0,0,n),i1=clamp(s0+NL,0,n);logOp([src],{k:'sil',a,b});if(i1>i0)src.ch=src.ch.map(s=>s.splice(i0,i1,Seq.zeros(i1-i0)));clrFromAbs(src,aCut(srcAbs,a,b));mkCut(src,[a,b])}
-  else{logOp([src],{k:'del',a,b});removeTime(src,a,b);mkCut(src,[a])}
+  else{logOp([src],{k:'del',a,b});const keep=envKeep(src,a,b);removeTime(src,a,b);if(keep)keep();mkCut(src,[a])}
   const mono=dst!=='new'&&!!tLen(dst)&&src.ch.length>dst.ch.length;/* Stereo-Passage in Mono-Spur → wird heruntergemischt */
   const isNew=dst==='new';let F=0;
-  if(isNew){dst=newTrack({name:src.name+' (Teil)',off:P,ch:seg,vol:src.vol,pan:src.pan});dst.clr=clrNorm(aPieces(srcAbs,a,b,src.color).map(q=>({...q})));S.tracks.push(dst)}
-  else{F=tLen(dst)?gapAt(dst,P,NL):0;const dAbs=clrAbs(dst),pcs=aPieces(srcAbs,a,b,src.color!==dst.color?src.color:null),off0=dst.off,ext=(NL-F)/SR,fe=P+F/SR;logOp([dst],{k:'paste',a:P,b:fe,len:r4(L)});insertFill(dst,P,seg,F);remapCuts(dst,off0,x=>x>=fe-1e-9&&x>P+1e-9?x+ext:x);clrFromAbs(dst,aIns(aDel(dAbs,P,fe),P,L,pcs));mkCut(dst,[P,P+L])}
+  if(isNew){dst=newTrack({name:src.name+' (Teil)',off:P,ch:seg,vol:src.vol,pan:src.pan});if(sn.has)dst.env=[{t:0,db:sn.v0},...sn.pts.map(q=>({...q})),{t:L,db:sn.v1}];dst.clr=clrNorm(aPieces(srcAbs,a,b,src.color).map(q=>({...q})));S.tracks.push(dst)}
+  else{F=tLen(dst)?gapAt(dst,P,NL):0;const dAbs=clrAbs(dst),pcs=aPieces(srcAbs,a,b,src.color!==dst.color?src.color:null),off0=dst.off,ext=(NL-F)/SR,fe=P+F/SR;logOp([dst],{k:'paste',a:P,b:fe,len:r4(L)});const had=(dst.env||[]).length,vL=had?envDbAt(dst,P-dst.off-.0005):0,vR=had?envDbAt(dst,fe-dst.off+.0005):0;
+    insertFill(dst,P,seg,F);remapCuts(dst,off0,x=>x>=fe-1e-9&&x>P+1e-9?x+ext:x);clrFromAbs(dst,aIns(aDel(dAbs,P,fe),P,L,pcs));mkCut(dst,[P,P+L]);if(had||sn.has)envPut(dst,P,sn,vL,vR)}
   const ext=NL-F;/* nur der Überstand über die Lücke verschiebt den Rest */
-  if(sync&&ext>0){const E=ext/SR,oth=S.tracks.filter(x=>x!==dst&&!x.lock&&tLen(x)&&P<tEnd(x));logOp(oth,{k:'paste',a:P,b:P,len:r4(E),z:1});for(const x of oth){insertSilence(x,P,ext);mkCut(x,[P,P+E])}shiftTextIns(P+F/SR,E);for(const k of TKEYS)sortT(k)}
+  if(sync&&ext>0){const E=ext/SR,oth=S.tracks.filter(x=>x!==dst&&!x.lock&&tLen(x)&&P<tEnd(x));logOp(oth,{k:'paste',a:P,b:P,len:r4(E),z:1});for(const x of oth){envIns(x,P,E,()=>insertSilence(x,P,ext));mkCut(x,[P,P+E])}shiftTextIns(P+F/SR,E);for(const k of TKEYS)sortT(k)}
   S.tracks.forEach(x=>x.sel=x===dst);S.focus=dst.id;setSel(P,P+NL/SR);changed(true);toast('Passage nach „'+dst.name+'“ verschoben'+(F>0?' · Lücke gefüllt'+(ext>0?', Rest nur um '+nf(ext/SR,1)+' s verschoben':''):'')+(sync&&ext>0?' · übrige Spuren synchron gehalten':'')+(mono?' · ⚠ Stereo wurde in Mono umgewandelt (Zielspur ist Mono)':''),mono?5000:2800)}
 
 /* ============================== Bearbeitungsprotokoll & Rezepte ==============================

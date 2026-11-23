@@ -164,7 +164,8 @@ body.sideoff #side{display:none}
 #rzSteps{display:flex;flex-direction:column;gap:2px;max-height:46vh;overflow:auto;margin:8px 0}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
-#hidList{margin-top:10px}#hidList .hh{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d5d65;margin:0 0 4px 2px}
+#hidList{margin-top:10px}#hidList .hh{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5d5d65;margin:0 0 4px 2px;display:flex;align-items:center;gap:6px}
+#hidList .hh .all{margin-left:auto;text-transform:none;letter-spacing:0;font-size:11.5px;color:#f5b942;cursor:pointer;padding:1px 8px;border-radius:10px}#hidList .hh .all:hover{background:#2a2412}
 #hidList .hr{display:flex;align-items:center;gap:4px;font-size:12px;color:#b9b9c0;padding:3px 4px 3px 8px;border-radius:8px;border-left:2px solid #f5b942;margin:2px 0;background:#1a1a1c}
 #hidList .hr .eo{display:flex;color:#f5b942;flex:none}#hidList .hr .eo .ic{width:13px;height:13px}
 #hidList .hr .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}#hidList .hr .tx:hover{color:#e7e7ea}
@@ -421,6 +422,7 @@ const I={
  filt:SV('<path d="M4 2v12M8 2v12M12 2v12" stroke-opacity=".5"/><path d="M2.5 10h3M6.5 5h3M10.5 8.5h3"/>'),/* EQ-Schieber */
  gate:SV('<path d="M1.5 8h1.5l1-3.5 1.2 7 1.2-5 .9 1.5H9"/><path d="M10.5 3.5v9"/><path d="M12.5 8h2" stroke-opacity=".55"/>'),
  xgate:SV('<path d="M1.5 5h2.5l1-2.5 1.2 5 1.2-4 1 1.5h6"/><path d="M1.5 11.5h3M11.5 11.5h3"/><path d="M6 9.5v4M10 9.5v4"/>'),
+ umm:SV('<path d="M2.5 3.5h11v7.2H7.2L4.3 13v-2.3H2.5z"/><path d="M6.3 5.6l3.4 3M9.7 5.6l-3.4 3"/>'),/* Sprechblase mit X */
  trunc:SV('<path d="M2 8h2.5M11.5 8H14"/><path d="M5.5 4.5v7M10.5 4.5v7M7.3 8h1.4"/>'),
  rev:SV('<path d="M13 5H4M6 2.5 3.5 5 6 7.5M3 11h9M10 8.5l2.5 2.5-2.5 2.5"/>'),
 };
@@ -601,7 +603,7 @@ function drawTrack(t){const r=ROWS.get(t.id);if(!r)return;const cv=r.cv,W=cv.cli
   /* ausgeblendete Passagen: gelbe gestrichelte Linie + Etikett mit der Länge (Klick: Einblenden/Anhören/Löschen) */
   r.hidHits=[];if(t.hid&&t.hid.length){g.save();g.font=`600 ${10.5*d}px Inter,system-ui,sans-serif`;g.textBaseline='middle';
     for(const hd of t.hid){const x=Math.round(X(t.off+hd.at));if(x<-80||x>w+80)continue;g.setLineDash([3*d,3*d]);g.strokeStyle='#f5b942';g.lineWidth=1.5*d;g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();g.setLineDash([]);
-      const lbl=nf(hd.len,1)+' s',iw=12*d,bw=g.measureText(lbl).width+iw+16*d,bh=16*d,bx=clamp(x-bw/2,0,Math.max(0,w-bw)),by=16*d;
+      const lbl=hd.tag==='umm'?'Ähm':nf(hd.len,1)+' s',iw=12*d,bw=g.measureText(lbl).width+iw+16*d,bh=16*d,bx=clamp(x-bw/2,0,Math.max(0,w-bw)),by=16*d;
       g.fillStyle='#2a2412';g.strokeStyle='#f5b942';g.lineWidth=d;g.beginPath();g.roundRect(bx,by,bw,bh,8*d);g.fill();g.stroke();g.fillStyle='#f5b942';g.fillText(lbl,bx+7*d+iw+3*d,by+bh/2+.5*d);
       /* durchgestrichenes Auge = ausgeblendet */
       {const ex=bx+7*d+iw/2,ey=by+bh/2,rw=5.2*d,rh=3.6*d;g.lineWidth=1.2*d;g.strokeStyle='#f5b942';g.beginPath();g.moveTo(ex-rw,ey);g.quadraticCurveTo(ex,ey-rh*1.6,ex+rw,ey);g.quadraticCurveTo(ex,ey+rh*1.6,ex-rw,ey);g.stroke();
@@ -925,7 +927,7 @@ function limit(seg,ceilDb){const n=seg[0].length,c=db2lin(ceilDb),L=Math.max(1,M
 function normPeak(seg,db){const pk=Math.max(...seg.map(peakOf));if(pk>0)seg.forEach(a=>scale(a,db2lin(db)/pk))}
 function normLufs(seg,target,useLimiter,ctx){const L=lufs(seg);if(!isFinite(L))throw new Error('Bereich zu kurz (mind. 0,4 s) oder still');seg.forEach(a=>scale(a,db2lin(target-L)));
   const pk=Math.max(...seg.map(peakOf));if(pk>db2lin(CEIL)){if(useLimiter)limit(seg,CEIL);else{seg.forEach(a=>scale(a,db2lin(CEIL)/pk));if(ctx)ctx.note='Lautheit begrenzt, damit nichts übersteuert'}}}
-function fade(seg,curve,isIn){const n=seg[0].length;for(let i=0;i<n;i++){let x=n>1?i/(n-1):1;if(!isIn)x=1-x;const g=curve==='lin'?x:curve==='s'?.5-.5*Math.cos(Math.PI*x):(x<=0?0:Math.pow(10,(x-1)*3));for(const a of seg)a[i]*=g}}
+function fade(seg,curve,isIn){const n=seg[0].length;for(let i=0;i<n;i++){let x=n>1?i/(n-1):1;if(!isIn)x=1-x;const g=fadeG(curve,x);for(const a of seg)a[i]*=g}}
 function findSilences(seg,p){const n=seg[0].length,F=Math.max(1,Math.round(SR*.01)),thr=db2lin(p.thr),minF=Math.round(p.min/.01),nfm=Math.ceil(n/F),runs=[];let s=-1;
   for(let f=0;f<=nfm;f++){let q=false;if(f<nfm){let m=0;const e=Math.min(n,(f+1)*F);for(const a of seg)for(let i=f*F;i<e;i++){const v=a[i]<0?-a[i]:a[i];if(v>m)m=v}q=m<thr}
     if(q){if(s<0)s=f}else if(s>=0){if(f-s>=minF)runs.push([s*F,Math.min(n,f*F)]);s=-1}}
@@ -941,7 +943,7 @@ function cutsFromFrames(fm,F,nF,n,p){const thr=db2lin(p.thr),minF=Math.round(p.m
   for(let f=0;f<=nF;f++){const q=f<nF&&fm[f]<thr;if(q){if(r0<0)r0=f}else if(r0>=0){if(f-r0>=minF)runs.push([r0*F,Math.min(n,f*F)]);r0=-1}}
   const keep=Math.round(p.keep*SR),cuts=[];for(const[a,b]of runs)if(b-a>keep){const h=keep>>1;cuts.push([a+h,b-(keep-h)])}return cuts}
 
-/* ---- Rauschsperre / Mehrspur-Gate ----
+/* ---- Pausen absenken (Noise Gate) / Mehrspur-Gate ----
    Pegel je 10-ms-Rahmen (leichter Hochpass, damit Trittschall/Brummen nicht zählt) → offen/zu mit Hysterese, Haltezeit und
    Vorschau (öffnet 15 ms vor dem ersten Laut) → weiche Lautstärkekurve. Solange offen, bleibt der Ton bitgenau unverändert. */
 const GF=()=>Math.max(1,Math.round(SR*.01));
@@ -971,8 +973,111 @@ function gateInfo(st,thr,auto){if(!st.ok)return '<span class="warn">Zu wenig Ton
   return `Hintergrund ≈ <b>${fmtDb(st.floor)} dB</b> · Sprache ≈ <b>${fmtDb(st.speech)} dB</b> · Schwelle <b>${fmtDb(thr)} dB</b>${auto?' (automatisch)':''}`+
     (st.gap<15?'<br><span class="warn">Sprache ist kaum lauter als der Hintergrund – erst „Rauschreduzierung“ anwenden, sonst greift die Sperre schlecht.</span>':'')}
 
+/* ---- Ähms finden (Klang-Erkennung, keine KI) ----
+   Ein „Ähm“ ist ein gleichbleibender Vokal (oft mit „m“ am Ende) mit flacher Tonhöhe, 0,2–1,5 s lang, meist mit Pause davor oder danach.
+   Je 10-ms-Rahmen: Pegel (wie „Pausen absenken“), Klangfarbe (20 Mel-Bänder, ~16 kHz) und Tonhöhe (Autokorrelation).
+   Mit einem Beispiel-Ähm je Spur (t.umm) wird zusätzlich verglichen, ob Klangfarbe und Tonhöhe zur Person passen. */
+const UMB=20,UFE=new WeakMap();
+function ummBands(N,sr2){const mel=f=>2595*Math.log10(1+f/700),imel=m=>700*(Math.pow(10,m/2595)-1),lo=mel(90),hi=mel(4000),ed=[];
+  for(let i=0;i<UMB+2;i++)ed.push(imel(lo+(hi-lo)*i/(UMB+1))*N/sr2);
+  return Array.from({length:UMB},(_,b)=>{const a=ed[b],c=ed[b+1],e=ed[b+2],w=[];for(let k=Math.floor(a);k<=Math.ceil(e);k++){const v=k<=c?(k-a)/(c-a):(e-k)/(e-c);if(v>0)w.push([k,v])}return w})}
+function ummFeat(t,i0,i1,onp){let m=UFE.get(t.ch[0]);if(!m){m=new Map();UFE.set(t.ch[0],m)}const key=i0+':'+i1+':'+t.ch.length;if(m.has(key))return m.get(key);
+  const pr=ummFeatCalc(t,i0,i1,onp);m.set(key,pr);pr.catch(()=>m.delete(key));return pr}
+async function ummFeatCalc(t,i0,i1,onp){onp=onp||(()=>{});
+  const n=i1-i0,F=GF(),nF=Math.ceil(n/F),D=Math.max(1,Math.round(SR/16000)),sr2=SR/D,W=512,N=1024,fft=makeFFT(N);
+  const st=await trackStats(t.ch),L=await frameLevels(t.ch,i0,n),thr=st.ok?st.thr:-50;onp(.1);
+  /* Mono, Tiefpass (2 Biquads) und jede D-te Probe → ~16 kHz */
+  const m=new Float32Array(Math.ceil(n/D)+1),nc=t.ch.length,lp=[.541,1.307].map(q=>{const w=2*Math.PI*.42*sr2/SR,cs=Math.cos(w),al=Math.sin(w)/(2*q),a0=1+al;return{b0:(1-cs)/2/a0,b1:(1-cs)/a0,b2:(1-cs)/2/a0,a1:-2*cs/a0,a2:(1-al)/a0,x1:0,x2:0,y1:0,y2:0}});
+  const CH=SR*4;let tm=performance.now();
+  for(let c0=0;c0<n;c0+=CH){const len=Math.min(CH,n-c0),mono=new Float32Array(len);
+    for(const s of t.ch){const d=s.slice(i0+c0,i0+c0+len);for(let k=0;k<d.length;k++)mono[k]+=d[k]/nc}
+    {const[p1,p2]=lp;let{x1:a1,x2:a2,y1:b1,y2:b2}=p1,{x1:c1,x2:c2,y1:d1,y2:d2}=p2;/* zwei Biquads, Zustand in lokalen Variablen (schnell) */
+      for(let k=0;k<len;k++){const x=mono[k],y=p1.b0*x+p1.b1*a1+p1.b2*a2-p1.a1*b1-p1.a2*b2;a2=a1;a1=x;b2=b1;b1=y;const z=p2.b0*y+p2.b1*c1+p2.b2*c2-p2.a1*d1-p2.a2*d2;c2=c1;c1=y;d2=d1;d1=z;const gi=c0+k;if(gi%D===0)m[gi/D]=z}
+      Object.assign(p1,{x1:a1,x2:a2,y1:b1,y2:b2});Object.assign(p2,{x1:c1,x2:c2,y1:d1,y2:d2})}
+    if(performance.now()-tm>30){await yieldUI();tm=performance.now();onp(.1+.1*c0/n)}}
+  const vec=new Float32Array(nF*UMB),voi=new Float32Array(nF),f0=new Float32Array(nF),hann=new Float32Array(W),re=new Float64Array(N),im=new Float64Array(N),P=new Float64Array(N/2+1),bands=ummBands(N,sr2);
+  for(let k=0;k<W;k++)hann[k]=.5-.5*Math.cos(2*Math.PI*k/(W-1));
+  const wr=new Float64Array(W);for(let l=0;l<W;l++){let a=0;for(let k=0;k+l<W;k++)a+=hann[k]*hann[k+l];wr[l]=a}
+  const lagMin=Math.floor(sr2/420),lagMax=Math.min(W-2,Math.ceil(sr2/65));
+  for(let f=0;f<nF;f++){if(L[f]<thr-10)continue;const c=Math.round((f*F+F/2)/D)-(W>>1);
+    for(let k=0;k<N;k++){const j=c+k;re[k]=k<W&&j>=0&&j<m.length?m[j]*hann[k]:0;im[k]=0}
+    fft.fwd(re,im);for(let k=0;k<=N/2;k++)P[k]=re[k]*re[k]+im[k]*im[k];
+    const o=f*UMB;let mean=0;for(let b=0;b<UMB;b++){let a=1e-12;for(const[k,w]of bands[b])a+=P[k]*w;const v=10*Math.log10(a);vec[o+b]=v;mean+=v}mean/=UMB;for(let b=0;b<UMB;b++)vec[o+b]-=mean;
+    for(let k=0;k<N;k++){re[k]=k<=N/2?P[k]:P[N-k];im[k]=0}fft.inv(re,im);const r0=re[0];if(!(r0>0))continue;
+    let best=0,bl=0;for(let l=lagMin;l<=lagMax;l++){const v=re[l]/r0*wr[0]/wr[l];if(v>best){best=v;bl=l}}
+    {const nv=l=>re[l]/r0*wr[0]/wr[l];for(let l=lagMin+1;l<bl;l++){const v=nv(l);if(v>=.8*best&&v>=nv(l-1)&&v>=nv(l+1)){best=Math.max(v,best*.95);bl=l;break}}}/* Oktavfehler vermeiden: erster deutlicher Gipfel */
+    let lag=bl;if(bl>lagMin&&bl<lagMax){const y1=re[bl-1],y2=re[bl],y3=re[bl+1],dn=y1-2*y2+y3;if(dn<0)lag=bl+.5*(y1-y3)/dn}
+    voi[f]=Math.min(1.2,best);f0[f]=sr2/lag;
+    if(performance.now()-tm>30){await yieldUI();tm=performance.now();onp(.2+.8*f/nF)}}
+  onp(1);return{nF,F,L,thr,vec,voi,f0}}
+const ummSt=(Fe,f)=>12*Math.log2(Math.max(40,Fe.f0[f])/100);/* Tonhöhe in Halbtönen */
+function ummOk(Fe,f){return f>=0&&f<Fe.nF&&Fe.L[f]>Fe.thr&&Fe.voi[f]>.5}
+function ummFlux(Fe,f,g){let a=0;const x=f*UMB,y=g*UMB;for(let k=0;k<UMB;k++)a+=Math.abs(Fe.vec[x+k]-Fe.vec[y+k]);return a/UMB}
+function ummFind(Fe,p,ref){const{nF,L,thr,voi}=Fe,safe=p.mode!=='more',FT=safe?3.2:4.2,st=f=>ummSt(Fe,f),ok=f=>ummOk(Fe,f);
+  const steady=new Uint8Array(nF);for(let f=2;f<nF;f++)steady[f]=ok(f)&&ok(f-1)&&ok(f-2)&&ummFlux(Fe,f,f-2)<FT&&Math.abs(st(f)-st(f-1))<1.2?1:0;
+  const out=[],minF=Math.round(p.min/.01),maxF=Math.round(p.max/.01),EXT=35;
+  /* Pause davor/danach suchen: höchstens 50 ms Übergang (Ausklang, Atem), dann leise Rahmen zählen */
+  const pz=(from,dir)=>{let g=from,skip=0;while(g>=0&&g<nF&&L[g]>=thr&&skip<5){g+=dir;skip++}if(g<0||g>=nF)return{len:0,edge:true};
+    let len=0,h=g;while(h>=0&&h<nF&&L[h]<thr&&len<150){h+=dir;len++}return{len,p0:g,p1:h}};
+  for(let f=0;f<nF;){if(!steady[f]){f++;continue}let a=f,b=f+1,gap=0;for(let g=f+1;g<nF;g++){if(steady[g]){b=g+1;gap=0}else if(++gap>2)break}f=b+1;
+    if(b-a<minF)continue;
+    const sv=[];for(let g=a;g<b;g++)if(ok(g))sv.push(st(g));sv.sort((x,y)=>x-y);const md=sv[sv.length>>1];
+    if(sv.filter(v=>Math.abs(v-md)<2).length<.8*sv.length||sv[Math.floor(sv.length*.95)]-sv[Math.floor(sv.length*.05)]>4.5)continue;/* Tonhöhe bleibt annähernd flach (leichtes Gleiten erlaubt) */
+    let s0=a,e0=b;/* Anlaut und „m“ am Ende mitnehmen: stimmhaft, ähnliche Tonhöhe, nicht viel leiser */
+    while(s0>0&&a-s0<EXT&&L[s0-1]>thr-8&&voi[s0-1]>.35&&Math.abs(st(s0-1)-md)<3)s0--;
+    while(e0<nF&&e0-b<EXT&&L[e0]>thr-8&&voi[e0]>.35&&Math.abs(st(e0)-md)<3)e0++;
+    if(e0-s0>maxF)continue;
+    const pb=pz(s0-1,-1),pa=pz(e0,1),hb=pb.edge||pb.len>=8,ha=pa.edge||pa.len>=8,core=(b-a)*.01;
+    let d=null;if(ref&&ref.vec){const av=new Float32Array(UMB);let c=0;for(let g=a;g<b;g++)if(steady[g]){for(let k=0;k<UMB;k++)av[k]+=Fe.vec[g*UMB+k];c++}
+      let sd=0;for(let k=0;k<UMB;k++)sd+=Math.abs(av[k]/Math.max(1,c)-ref.vec[k]);d=sd/UMB}
+    const iso=hb&&ha,one=hb||ha,pd=ref&&ref.vec?Math.abs(md-ref.st):0;let acc=iso||(!safe&&one&&core>=.3);
+    /* Mit Beispiel: klar passende Stellen zusätzlich, klar fremde (andere Klangfarbe/Tonlage) aussortieren */
+    if(d!=null){if(acc)acc=iso?d<7.5&&pd<6:d<5&&pd<5;else acc=pd<5&&((one&&d<3.5)||(!safe&&d<2.5&&core>=.3))}
+    if(acc)out.push({s:s0,e:e0,pb,pa,hb,ha,d,core})}
+  return out}
+/* Schnitt in Proben (relativ zum Bereichsanfang): Ähm plus einen Teil der Pausen – übrig bleibt etwa die längere der beiden Pausen */
+function ummCut(c,Fe,p){const F=Fe.F,pbS=c.hb&&!c.pb.edge?c.pb.len*.01:0,paS=c.ha&&!c.pa.edge?c.pa.len*.01:0,tot=pbS+paS;
+  const keep=p.pause?Math.min(tot,Math.max(Math.min(.25,tot),Math.max(pbS,paS))):tot;
+  let rB=Math.min(pbS,keep/2);const rA=Math.min(paS,keep-rB);rB=Math.min(pbS,keep-rA);
+  const A=pbS>0?(c.pb.p1+1)*F+Math.round(rB*SR):c.s*F,B=paS>0?c.pa.p1*F-Math.round(rA*SR):c.e*F;return[A,Math.max(A,B)]}
+/* Spricht eine andere Spur gleichzeitig (deutlich, nicht nur mitgehört)? Dann dort nicht schneiden */
+async function ummClash(t,others,a,b){const n=Math.round((b-a)*SR);if(!others.length||n<GF())return false;const La=await frameLevels(t.ch,Math.round((a-t.off)*SR),n);
+  for(const o of others){const st=await trackStats(o.ch);if(!st.ok)continue;const Lo=await frameLevels(o.ch,Math.round((a-o.off)*SR),n);let run=0;
+    for(let f=0;f<Lo.length;f++){if(Lo[f]>st.thr&&Lo[f]>La[f]-8){if(++run>=3)return true}else run=0}}return false}
+async function ummScan(ts,p,onp){const res=[];for(let k=0;k<ts.length;k++){const t=ts[k],[i0,i1]=trackRange(t);if(i1-i0<SR*.5)continue;
+    const Fe=await ummFeat(t,i0,i1,f=>onp&&onp((k+f*.95)/ts.length));
+    for(const c of ummFind(Fe,p,t.umm)){const[A,B]=ummCut(c,Fe,p);if(B-A>GF()*10)res.push({t,a:t.off+(i0+A)/SR,b:t.off+(i0+B)/SR,core:c.core})}}
+  return res}
+async function ummApply(ts,p){setBusy(true,'Suche Ähms …',true);await paintPause();let skip=0;const cuts=[];
+  try{const found=await ummScan(ts,p,progress);setBusyLabel('Prüfe andere Spuren …');
+    for(const c of found){const oth=S.sync?syncSet(ts).filter(o=>o!==c.t&&tLen(o)):[];if(await ummClash(c.t,oth,c.a,c.b)){skip++;continue}cuts.push(c)}}
+  catch(e){setBusy(false);if(e.cancelled)return toast('Ähm-Suche abgebrochen – nichts geändert');console.error(e);return toast('Fehler: '+e.message,4500)}
+  setBusy(false);
+  if(!cuts.length)return toast(skip?`Nichts ausgeblendet – ${skip} gefunden, aber dort spricht gleichzeitig jemand anderes`:'Keine Ähms gefunden'+(ts.some(t=>!t.umm)?' – Tipp: ein Ähm markieren und „Beispiel aus Auswahl“ wählen':''),5000);
+  cuts.sort((x,y)=>x.a-y.a);const M=[];for(const c of cuts){const l=M[M.length-1];if(l&&c.a<=l.b+.01)l.b=Math.max(l.b,c.b);else M.push({...c})}
+  stopAll();pushUndo('Ähms entfernen');let sum=0;
+  for(let i=M.length-1;i>=0;i--){const c=M[i],set=(S.sync?syncSet(ts):[c.t]).filter(t=>tLen(t));hideRange(set,c.a,c.b,'umm');sum+=c.b-c.a}
+  if(hasSel())S.sel.b=Math.max(S.sel.a,S.sel.b-sum);S.lastFx='umm';changed(true);
+  toast(`${M.length} ${M.length===1?'Ähm':'Ähms'} ausgeblendet · ${nf(sum,1)} s${skip?` · ${skip} übersprungen (jemand spricht gleichzeitig)`:''} – über „Ausgeblendete Passagen“ zurückholbar`,6000)}
+async function ummPreview(ts,p){setBusy(true,'Suche Ähms …',true);await paintPause();
+  try{const t=ts[0],r=(await ummScan([t],p,progress)).slice(0,12);setBusy(false);if(!r.length)return toast('Keine Ähms gefunden');
+    const gap=Math.round(.35*SR),parts=r.map(c=>{const i0=clamp(Math.round((c.a-t.off)*SR),0,tLen(t)),i1=clamp(Math.round((c.b-t.off)*SR),0,tLen(t));return t.ch.map(q=>q.slice(i0,i1))});
+    const len=parts.reduce((a,x)=>a+x[0].length+gap,0),out=t.ch.map(()=>new Float32Array(len));let o=0;for(const x of parts){x.forEach((a,c)=>out[c].set(a,o));o+=x[0].length+gap}
+    playPreview(out,t);toast(`Vorschau: ${r.length} gefundene ${r.length===1?'Stelle':'Stellen'} hintereinander${r.length===12?' (die ersten 12)':''} – genau das würde ausgeblendet`,4000)}
+  catch(e){setBusy(false);toast(e.cancelled?'Vorschau abgebrochen':'Fehler: '+e.message)}}
+/* Beispiel-Ähm aus der Auswahl lernen (je Spur): Klangfarbe der ruhigen Vokal-Rahmen + mittlere Tonhöhe */
+async function ummLearn(){if(!editable())return;if(!hasSel())return toast('Erst ein einzelnes Ähm markieren (ca. 0,3–1 s), dann „Beispiel aus Auswahl“',4500);
+  if(S.sel.b-S.sel.a>3)return toast('Bitte nur ein einzelnes Ähm markieren (höchstens 3 s)',4000);const ts=targets();if(!ts)return;const names=[];
+  setBusy(true,'Lerne Ähm …');try{for(const t of ts){const[i0,i1]=trackRange(t);if(i1-i0<GF()*10)continue;const Fe=await ummFeatCalc(t,i0,i1),av=new Float32Array(UMB),sv=[];let c=0;
+      for(let f=2;f<Fe.nF;f++)if(ummOk(Fe,f)&&ummOk(Fe,f-2)&&ummFlux(Fe,f,f-2)<4.5){for(let k=0;k<UMB;k++)av[k]+=Fe.vec[f*UMB+k];sv.push(ummSt(Fe,f));c++}
+      if(c<8)continue;sv.sort((x,y)=>x-y);t.umm={vec:Array.from(av,v=>Math.round(v/c*100)/100),st:Math.round(sv[sv.length>>1]*100)/100,at:Date.now()};names.push(t.name)}}
+  finally{setBusy(false)}
+  if(!names.length)return toast('In der Auswahl ist kein deutliches Ähm zu hören – bitte genauer markieren',4500);
+  scheduleSave();updFxInfo();toast(`Ähm-Beispiel gespeichert für „${names.join('“, „')}“ – die Suche achtet jetzt auf diese Stimme`,4500)}
+function ummForget(){const ts=targets(true)||[];let n=0;for(const t of ts)if(t.umm){delete t.umm;n++}if(!n)return toast('Für diese Spur ist kein Beispiel gespeichert');scheduleSave();updFxInfo();toast('Ähm-Beispiel gelöscht')}
+
 /* ============================== Effekte ============================== */
-const CURVES=[['db','Linear (Lautstärke)'],['lin','Linear (Signal)'],['s','Weich (S-Kurve)']];/* db = gleichmäßig in dB (wie man hört), lin = gleichmäßig in der Signalhöhe */
+const CURVES=[['hear','Gleichmäßig (gehört)'],['db','Gerade (dB)'],['lin','Linear (Signal)'],['s','Weich (S-Kurve)']];/* db = gleichmäßig in dB (wie man hört), lin = gleichmäßig in der Signalhöhe */
 const FDEF={hp:80,lp:9000,ls:150,hs:6000,pk:3000};
 const ENH={leicht:{red:9,thr:-22,ratio:2,pres:1.5,air:1,mud:-1.5},mittel:{red:13,thr:-24,ratio:3,pres:2.5,air:1.5,mud:-2.5},stark:{red:18,thr:-28,ratio:4.5,pres:3.5,air:2,mud:-3.5}};
 const FX=[
@@ -993,7 +1098,7 @@ const FX=[
  extra(pn){const r=el('div','chipsrow');r.style.margin='8px 0 0';const a=el('button','','Profil aus Auswahl');a.onclick=captureNoise;const b=el('button','','Automatisch');b.title='Profil verwerfen und automatisch die leisesten Stellen nutzen';b.onclick=()=>{S.noise=null;updFxInfo();toast('Rauschprofil: automatisch')};r.append(a,b);pn.append(r)},
  info:ts=>(S.noise?`Rauschprofil: <b>aus Auswahl</b> (${nf(S.noise.dur,1)} s)`:'Rauschprofil: <b>automatisch</b> (leiseste Stellen)')+'<br>'+scopeTxt(ts),
  handle:.2,async run(seg,p,c,onp,t){const pow=S.noise?S.noise.pow:autoProfileFor(t),out=[];for(let i=0;i<seg.length;i++)out.push(await nrRun(seg[i],pow,p,f=>onp((i+f)/seg.length)));return out}},
-{id:'gate',name:'Rauschsperre',icon:'gate',
+{id:'gate',name:'Pausen absenken',icon:'gate',
  desc:'Schaltet leise Stellen zwischen dem Sprechen stumm – Atmen, Rauschen, leise Geräusche. Während gesprochen wird, bleibt der Ton unverändert.',
  params:[{k:'auto',l:'Schwelle automatisch',type:'chk',def:true},{k:'thr',l:'Schwelle',min:-80,max:-20,step:1,def:-50,u:'dB',show:p=>!p.auto},
   {k:'red',l:'Absenkung',min:6,max:60,step:1,def:60,fmt:v=>v>=60?'stumm':'−'+Math.round(v)+' dB'},{k:'hold',l:'Halten',min:50,max:800,step:10,def:250,u:'ms'},{k:'rel',l:'Ausblenden',min:20,max:500,step:10,def:150,u:'ms'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
@@ -1047,9 +1152,9 @@ const FX=[
  info(ts){const pk=Math.max(...ts.map(t=>{const[i0,i1]=trackRange(t);return memo(t,'pk',i0,i1,()=>Math.max(...t.ch.map(s=>rangePeak(s,i0,i1))))}));return `Spitze: <b>${fmtDb(lin2db(pk))} dBFS</b> · max. ohne Übersteuern: <b>${fmtDb(-lin2db(pk))} dB</b><br>${scopeTxt(ts)}`},
  prepare(ts,p){const pk=Math.max(...ts.map(t=>{const[i0,i1]=trackRange(t);return Math.max(...t.ch.map(s=>rangePeak(s,i0,i1)))}));let g=p.gain;if(!p.clip&&pk>0&&lin2db(pk)+g>0){g=-lin2db(pk);toast(`Auf ${fmtDb(g)} dB begrenzt (kein Übersteuern)`)}return{g:db2lin(g)}},
  run(seg,p,c){seg.forEach(a=>scale(a,c.g));return seg}},
-{id:'fin',name:'Einblenden',icon:'fin',envFade:true,params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'db'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
+{id:'fin',name:'Einblenden',icon:'fin',envFade:true,params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'hear'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
  info:ts=>hasSel()?scopeTxt(ts):`Ohne Auswahl: erste <b>${nf(FXP.fin.dur,1)} s</b> · ${ts.length} ${ts.length===1?'Spur':'Spuren'}`,run(seg,p){fade(seg,p.curve,true);return seg}},
-{id:'fout',name:'Ausblenden',icon:'fout',envFade:true,params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'db'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
+{id:'fout',name:'Ausblenden',icon:'fout',envFade:true,params:[{k:'curve',l:'Kurve',type:'sel',opts:CURVES,def:'hear'},{k:'dur',l:'Ohne Auswahl',min:.1,max:30,step:.1,def:3,u:'s'},{k:'env',l:'Als Hüllkurve setzen (nachträglich anpassbar)',type:'chk',def:true}],
  info:ts=>hasSel()?scopeTxt(ts):`Ohne Auswahl: letzte <b>${nf(FXP.fout.dur,1)} s</b> · ${ts.length} ${ts.length===1?'Spur':'Spuren'}`,run(seg,p){fade(seg,p.curve,false);return seg}},
 {id:'comp',name:'Kompressor',icon:'comp',desc:'Gleicht laute und leise Stellen aus – ideal für Sprache.',
  params:[{k:'thr',l:'Schwelle',min:-60,max:0,step:1,def:-20,u:'dB'},{k:'ratio',l:'Verhältnis',min:1,max:20,step:.1,def:3,u:':1'},{k:'att',l:'Attack',min:.1,max:100,step:.1,def:5,u:'ms'},{k:'rel',l:'Release',min:10,max:1000,step:5,def:150,u:'ms'},{k:'knee',l:'Knie',min:0,max:24,step:1,def:6,u:'dB'},{k:'norm',l:'Danach normalisieren (−1 dB)',type:'chk',def:true}],
@@ -1058,6 +1163,17 @@ const FX=[
  params:[{k:'type',l:'Typ',type:'sel',opts:[['hp','Hochpass (Rumpeln/Brummen weg)'],['lp','Tiefpass (Zischen weg)'],['ls','Bässe'],['hs','Höhen'],['pk','Präsenz / Glocke']],def:'hp'},
   {k:'freq',l:'Frequenz',min:20,max:20000,log:true,def:80,u:'Hz'},{k:'gain',l:'Anhebung',min:-18,max:18,step:.5,def:3,u:'dB',show:p=>!['hp','lp'].includes(p.type)},{k:'steep',l:'Steil (24 dB/Oktave)',type:'chk',def:true,show:p=>['hp','lp'].includes(p.type)}],
  handle:.2,onparam(k,p,fx){if(k==='type'){p.freq=FDEF[p.type];fx.set('freq',p.freq)}},info:scopeTxt,run(seg,p){filt(seg,p.type,p.freq,p.gain,p.steep);return seg}},
+{id:'umm',name:'Ähms entfernen',icon:'umm',
+ desc:'Findet „Ähm“ und „Äh“ am Klang (keine KI) und blendet sie aus – jederzeit zurückholbar über die gelben Markierungen oder „Ausgeblendete Passagen“. Genauer wird es, wenn du pro Spur ein Ähm markierst und „Beispiel aus Auswahl“ klickst.',
+ params:[{k:'mode',l:'Suche',type:'sel',opts:[['safe','Vorsichtig'],['more','Gründlich']],def:'safe'},
+  {k:'min',l:'Mindestlänge',min:.15,max:.6,step:.05,def:.25,u:'s'},{k:'max',l:'Höchstlänge',min:.6,max:2,step:.1,def:1.4,u:'s'},{k:'pause',l:'Pausen rund ums Ähm mitkürzen',type:'chk',def:true}],
+ extra(pn){const r=el('div','chipsrow');r.style.margin='8px 0 0';const a=el('button','','Beispiel aus Auswahl');a.dataset.tip=tipHtml('umm.learn');a.onclick=ummLearn;
+   const b=el('button','','Beispiel löschen');b.title='Gespeichertes Beispiel-Ähm der ausgewählten Spur verwerfen';b.onclick=ummForget;r.append(a,b);pn.append(r)},
+ info(ts){const t=ts[0],[i0,i1]=trackRange(t),P={...FXP.umm},ex=ts.filter(x=>x.umm).map(x=>esc(x.name));
+   const r=memoAsync(t,`umm${P.mode}/${P.min}/${P.max}/${P.pause}/${t.umm?t.umm.at:0}`,i0,i1,async()=>ummFind(await ummFeat(t,i0,i1),P,t.umm).length);
+   return (r==null?'<span class="hint">Suche Ähms …</span>':`Findet <b>${r}</b> ${r===1?'Ähm':'Ähms'}${ts.length>1?' (erste Spur)':''}`)+'<br>'+
+     (ex.length?`Beispiel-Ähm: <b>${ex.join(', ')}</b>`:'<span class="hint">Kein Beispiel-Ähm – Tipp: eins markieren und „Beispiel aus Auswahl“</span>')+(S.sync&&S.tracks.length>1?'<br>Sync an: andere Spuren werden mitgekürzt, außer dort spricht gerade jemand':'')+'<br>'+scopeTxt(ts)},
+ lenChange:true,apply:ummApply,preview:ummPreview,pvTip:'Alle gefundenen Stellen (bis zu 12) hintereinander anhören – genau das würde ausgeblendet'},
 {id:'trunc',name:'Stille kürzen',icon:'trunc',desc:'Kürzt lange Pausen – z. B. für Podcasts. Mit „Sync“ werden alle Spuren gemeinsam gekürzt.',
  params:[{k:'thr',l:'Schwelle',min:-70,max:-20,step:1,def:-45,u:'dB'},{k:'min',l:'Pausen ab',min:.2,max:5,step:.1,def:.8,u:'s'},{k:'keep',l:'Kürzen auf',min:0,max:2,step:.05,def:.4,u:'s'}],
  info(ts){const t=ts[0],[i0,i1]=trackRange(t),P=FXP.trunc;const cuts=memoAsync(t,`tr${P.thr}/${P.min}/${P.keep}`,i0,i1,()=>silenceCutsAsync(t.ch.map(s=>({s,st:-i0})),i1-i0,P));if(!cuts)return `<span class="hint">Pausen werden gesucht …</span><br>${scopeTxt(ts)}`;const sum=cuts.reduce((s,[a,b])=>s+b-a,0);return `Findet <b>${cuts.length}</b> Pausen · spart <b>${nf(sum/SR,1)} s</b>${ts.length>1?' (erste Spur)':''}<br>${scopeTxt(ts)}`},
@@ -1080,16 +1196,16 @@ const TIPS={
  'nr.sens':['Wie schnell etwas als Rauschen gilt. Höher entfernt mehr, kann aber auch leise Teile der Stimme angreifen.','4–8 dB, Standard 6 dB.'],
  'nr.smooth':['Glättet die Bearbeitung, damit kein „Zwitschern“ oder Blubbern im Hintergrund entsteht.','2–4. Wenn es zwitschert: erhöhen.'],
  'nr.res':['Zum Kontrollieren: Du hörst nur, was entfernt wird. Ist darin Sprache zu hören, ist die Einstellung zu stark.','Nur zum Testen einschalten.'],
- gate:['Schaltet die leisen Stellen zwischen dem Sprechen stumm (oder leiser): Atmen, Rauschen, leise Geräusche. Solange gesprochen wird, bleibt der Ton völlig unverändert – die Sprachqualität leidet nicht.','Standardwerte mit „Schwelle automatisch“ passen meistens. Vorher mit „Vorschau“ anhören.'],
+ gate:['Schaltet die leisen Stellen zwischen dem Sprechen stumm (oder leiser): Atmen, Rauschen, leise Geräusche. Solange gesprochen wird, bleibt der Ton völlig unverändert – die Sprachqualität leidet nicht. Fachbegriff: Noise Gate (Rauschsperre). Wichtig: Rauschen während des Sprechens bleibt – dafür ist die Rauschreduzierung da.','Standardwerte mit „Schwelle automatisch“ passen meistens. Vorher mit „Vorschau“ anhören.'],
  'gate.auto':['Der Editor misst selbst, wie laut Hintergrund und Sprache sind, und legt die Schwelle passend dazwischen.','An.'],
  'gate.thr':['Alles, was leiser ist, wird abgesenkt. Zu hoch: leise Wortenden werden abgeschnitten. Zu niedrig: Atmer bleiben drin.','Etwa 25–35 dB unter der Sprache, meist zwischen −55 und −40 dB.'],
  'gate.red':['Wie stark leise Stellen abgesenkt werden. Ganz stumm kann „tot“ wirken, ein kleiner Rest klingt natürlicher.','Stumm (ganz rechts) für saubere Pausen, 15–25 dB, wenn es zu abgehackt wirkt.'],
  'gate.hold':['Wie lange nach dem Sprechen noch alles hörbar bleibt – damit Wortenden und kurze Pausen im Satz nicht zerhackt werden.','200–350 ms.'],
- 'gate.env':['Das Audio selbst bleibt unverändert: Die Rauschsperre setzt Punkte auf der Hüllkurve. Ist eine Stelle zu viel abgesenkt, ziehst du die Punkte im Hüllkurven-Modus (H) einfach hoch oder löschst sie. „Hüllkurve übernehmen“ schreibt es später endgültig ins Audio – nötig ist das nicht, Wiedergabe und Export beachten die Hüllkurve.','An – dann kannst du jede Stelle nachträglich korrigieren.'],
+ 'gate.env':['Das Audio selbst bleibt unverändert: „Pausen absenken“ setzt Punkte auf der Hüllkurve. Ist eine Stelle zu viel abgesenkt, ziehst du die Punkte im Hüllkurven-Modus (H) einfach hoch oder löschst sie. „Hüllkurve übernehmen“ schreibt es später endgültig ins Audio – nötig ist das nicht, Wiedergabe und Export beachten die Hüllkurve.','An – dann kannst du jede Stelle nachträglich korrigieren.'],
  'gate.rel':['Wie sanft danach ausgeblendet wird. Kurz = abrupt, lang = weich.','120–250 ms.'],
  xgate:['Für Gespräche, bei denen jede Person eine eigene Spur hat: Während die andere Person spricht, wird diese Spur leiser. So verschwinden deine Atmer, dein Räuspern und die Stimme deines Gasts, die dein Mikrofon mit aufnimmt. Sprecht ihr gleichzeitig, bleibt alles hörbar.','Beide Sprecherspuren auswählen und mit Standardwerten anwenden.'],
  'xgate.margin':['Wie viel leiser diese Spur als die andere sein muss, damit sie abgesenkt wird. Höher = vorsichtiger: Lacher und leise Einwürfe wie „mhm“ bleiben eher drin.','12–18 dB, Standard 15 dB.'],
- 'xgate.quiet':['Senkt zusätzlich leise Stellen ab, wenn gerade niemand spricht – wie die Rauschsperre.','An.'],
+ 'xgate.quiet':['Senkt zusätzlich leise Stellen ab, wenn gerade niemand spricht – wie „Pausen absenken“.','An.'],
  'xgate.red':['Wie stark diese Spur abgesenkt wird, während die andere spricht.','Stumm für saubere Spuren, 15–25 dB, wenn es zu abgehackt wirkt.'],
  'xgate.hold':['Wie lange die Spur nach deinem letzten Wort noch offen bleibt.','250–400 ms.'],
  'xgate.env':['Das Audio selbst bleibt unverändert: Abgesenkte Stellen werden als Punkte auf der Hüllkurve gesetzt. Hat es ein „mhm“ oder ein Wortende erwischt, ziehst du die Punkte im Hüllkurven-Modus (H) hoch oder löschst sie – oder markierst die Stelle und klickst „Hüllkurve zurücksetzen“.','An.'],
@@ -1107,11 +1223,11 @@ const TIPS={
  'amp.gain':['Plus = lauter, Minus = leiser. +6 dB klingt deutlich lauter, +10 dB etwa doppelt so laut.','Kleine Schritte: ±1 bis ±6 dB.'],
  'amp.clip':['Erlaubt, dass Spitzen über das Maximum gehen – das verzerrt hörbar.','Aus.'],
  fin:['Lässt den Ton am Anfang langsam lauter werden, statt abrupt einzusetzen.','Musik 2–5 s, Sprache 0,3–1 s.'],
- 'fin.curve':['Wie die Lautstärke ansteigt. Linear (Lautstärke): steigt so gleichmäßig an, wie man es hört – in der Hüllkurve eine gerade Linie. Linear (Signal): die klassische Blende vieler Schnittprogramme – wird am Anfang schnell hörbar, das letzte Stück dauert länger. Weich: beginnt und endet sanft.','Linear (Lautstärke) – Standard. Für Musik klingt Weich oft natürlicher.'],
+ 'fin.curve':['Wie die Lautstärke ansteigt. Gleichmäßig (gehört): wird so gleichmäßig lauter, wie das Ohr es empfindet – in der Mitte halb so laut. Gerade (dB): der Pegel steigt gleichmäßig in Dezibel, in der Hüllkurve eine gerade Linie – bleibt lange leise und wird erst am Ende richtig laut. Linear (Signal): die klassische Blende vieler Schnittprogramme – wird schnell hörbar, das letzte Stück dauert länger. Weich (S-Kurve): beginnt und endet sanft.','Gleichmäßig (gehört) – Standard. Für Musik klingt Weich oft natürlicher.'],
  'fin.env':['Das Audio bleibt unverändert: Die Blende wird als Punkte auf die Hüllkurve gesetzt. Länge oder Verlauf kannst du später im Hüllkurven-Modus (H) anpassen. Außerhalb der Markierung bleibt alles gleich laut.','An.'],
  'fin.dur':['Länge der Blende, wenn nichts markiert ist. Mit Markierung gilt die markierte Länge.','Musik 2–5 s, Sprache 0,3–1 s.'],
  fout:['Lässt den Ton am Ende langsam leiser werden, statt abrupt aufzuhören.','Musik 3–6 s, Sprache 0,5–1 s.'],
- 'fout.curve':['Wie die Lautstärke abfällt. Linear (Lautstärke): wird so gleichmäßig leiser, wie man es hört – in der Hüllkurve eine gerade Linie. Linear (Signal): die klassische Blende vieler Schnittprogramme – bleibt lange laut und verschwindet erst am Ende. Weich: beginnt und endet sanft.','Linear (Lautstärke) – Standard. Für Musik klingt Weich oft natürlicher.'],
+ 'fout.curve':['Wie die Lautstärke abfällt. Gleichmäßig (gehört): wird so gleichmäßig leiser, wie das Ohr es empfindet – in der Mitte halb so laut. Gerade (dB): der Pegel fällt gleichmäßig in Dezibel, in der Hüllkurve eine gerade Linie – wird schnell leise und klingt lange leise aus. Linear (Signal): die klassische Blende vieler Schnittprogramme – bleibt lange laut und verschwindet erst am Ende. Weich (S-Kurve): beginnt und endet sanft.','Gleichmäßig (gehört) – Standard. Für Musik klingt Weich oft natürlicher.'],
  'fout.env':['Das Audio bleibt unverändert: Die Blende wird als Punkte auf die Hüllkurve gesetzt. Länge oder Verlauf kannst du später im Hüllkurven-Modus (H) anpassen. Außerhalb der Markierung bleibt alles gleich laut.','An.'],
  'fout.dur':['Länge der Blende, wenn nichts markiert ist. Mit Markierung gilt die markierte Länge.','Musik 3–6 s, Sprache 0,5–1 s.'],
  comp:['Gleicht laute und leise Stellen an: Alles über der Schwelle wird gebremst. So kann man das Ganze danach lauter machen, ohne dass Spitzen stören.','Für Sprache ist „Sprache optimieren“ meist einfacher.'],
@@ -1126,7 +1242,13 @@ const TIPS={
  'filt.freq':['Die Tonhöhe, ab der bzw. um die der Filter wirkt. Unter 200 Hz = Bass, 300–3000 Hz = Stimme, ab 5 kHz = Zischlaute und „Luft“.','Hochpass 70–100 Hz, Tiefpass 8–12 kHz, Präsenz 2–5 kHz.'],
  'filt.gain':['Wie stark der Bereich angehoben (+) oder abgesenkt (−) wird.','±2 bis ±6 dB – lieber wenig.'],
  'filt.steep':['Schneidet steiler und damit genauer ab.','An.'],
- trunc:['Findet lange Pausen und kürzt sie. Die Aufnahme wird kürzer und wirkt flüssiger. Anders als die Rauschsperre schneidet es Zeit heraus.','Mit „Sync“ an, damit alle Spuren gleich gekürzt werden.'],
+ umm:['Sucht „Ähm“ und „Äh“ am Klang: ein gleichbleibender Laut mit flacher Tonhöhe, meist mit kurzer Pause davor oder danach. Gefundene Stellen werden ausgeblendet, nicht gelöscht – du kannst jede einzeln (gelbe Markierung) oder alle auf einmal zurückholen. Gedehnte Wörter wie „sooo“ oder ein „Mhm“ können mit erwischt werden.','Erst „Vorschau“ anhören, dann anwenden. Mit Beispiel-Ähm pro Spur wird es deutlich genauer.'],
+ 'umm.mode':['Vorsichtig: nur Ähms, die zwischen zwei Pausen stehen („…, ähm, …“) – sehr sicher. Gründlich: auch Ähms, die direkt an einem Wort hängen („und ähm“). Findet mehr, erwischt aber öfter mal ein gedehntes Wort.','Vorsichtig. Gründlich am besten zusammen mit einem Beispiel-Ähm.'],
+ 'umm.min':['So lang muss der gleichbleibende Laut mindestens sein. Kürzer = findet auch kurze „Äh“, aber eher mal ein normales Wort.','0,25 s (0,2–0,35 s).'],
+ 'umm.max':['Längere Laute werden nicht als Ähm gezählt – schützt z. B. gesungene oder sehr lang gezogene Wörter.','1,4 s.'],
+ 'umm.pause':['Steht das Ähm zwischen zwei Pausen, bleiben nach dem Entfernen sonst beide Pausen hintereinander stehen – das klingt nach einem Loch. An: es bleibt ungefähr nur die längere der beiden Pausen.','An.'],
+ 'umm.learn':['Markiere in einer Spur genau ein Ähm und klicke hier. Der Editor merkt sich Klangfarbe und Tonhöhe dieser Stimme und erkennt deren Ähms danach zuverlässiger – und verwechselt sie seltener mit Wörtern. Gilt für jede ausgewählte Spur einzeln und wird mit der Sitzung gespeichert.','Pro Sprecher ein typisches, deutliches Ähm.'],
+ trunc:['Findet lange Pausen und kürzt sie. Die Aufnahme wird kürzer und wirkt flüssiger. Anders als „Pausen absenken“ schneidet es Zeit heraus.','Mit „Sync“ an, damit alle Spuren gleich gekürzt werden.'],
  'trunc.thr':['Was als Stille zählt: alles leiser als dieser Wert. Höher (z. B. −35 dB) = auch leises Rauschen gilt als Pause.','−50 bis −40 dB.'],
  'trunc.min':['Nur Pausen, die mindestens so lang sind, werden gekürzt.','0,8–1,5 s.'],
  'trunc.keep':['Auf diese Länge wird jede gefundene Pause gekürzt. Zu kurz wirkt gehetzt.','0,3–0,6 s.'],
@@ -1140,6 +1262,7 @@ function memoAsync(t,kind,i0,i1,afn){const a=t.ch[0];let m=MEMO.get(a);if(!m){m=
   if(m.has(k)){const v=m.get(k);return v&&v.pending?null:v}m.set(k,{pending:true});afn().then(v=>{m.set(k,v);updFxInfo()},()=>m.delete(k));return null}
 const FXP=lsGet('fxp',{});
 /* Standardwerte geändert (Nov 2026): gespeicherte ALTE Standardwerte einmalig auf die neuen setzen – selbst gewählte Werte bleiben */
+if(!lsGet('fxpMig4',false)){for(const id of['fin','fout'])if(FXP[id]&&['s','lin','db'].includes(FXP[id].curve))FXP[id].curve='hear';lsSet('fxp',FXP);lsSet('fxpMig4',true);lsSet('fxpMig3',true)}/* Standard: Gleichmäßig (gehört) */
 if(!lsGet('fxpMig3',false)){for(const id of['fin','fout'])if(FXP[id]&&(FXP[id].curve==='s'||FXP[id].curve==='lin'))FXP[id].curve='db';lsSet('fxp',FXP);lsSet('fxpMig3',true)}/* neuer Standard: Linear (Lautstärke) */
 if(!lsGet('fxpMig1',false)){const M={gate:{hold:[200,250],rel:[120,150]},xgate:{hold:[250,300],rel:[150,180]}};for(const id in M)for(const k in M[id])if(FXP[id]&&FXP[id][k]===M[id][k][0])FXP[id][k]=M[id][k][1];lsSet('fxp',FXP);lsSet('fxpMig1',true)}
 function fxParams(fx){const p=FXP[fx.id]||(FXP[fx.id]={});for(const d of fx.params)if(p[d.k]===undefined)p[d.k]=d.def;return p}
@@ -1158,7 +1281,7 @@ function buildFx(){const box=$('#fxList');box.innerHTML='';
       w.dataset.k=d.k;w.dataset.tip=tipHtml(fx.id+'.'+d.k,'Standard: '+(d.type==='sel'?esc((d.opts.find(o=>o[0]===d.def)||[,''])[1]):d.type==='chk'?(d.def?'an':'aus'):esc(fmtParam(d,d.def))+' · Doppelklick auf den Regler stellt ihn zurück'));pn.append(w)}
     fx.set=(k,v)=>fx.ctl[k]&&fx.ctl[k].set(v);
     if(fx.extra)fx.extra(pn,fx);const info=el('div','fxinfo');pn.append(info);
-    const bt=el('div','fxbtns'),pv=el('button','pv','Vorschau');pv.title='Bis zu 8 s des Bereichs mit Effekt anhören';pv.onclick=()=>PV.src?stopPreview():previewFx(fx.id);const ap=el('button','primary','Anwenden');ap.onclick=()=>applyFx(fx.id);bt.append(pv,ap);pn.append(bt);
+    const bt=el('div','fxbtns'),pv=el('button','pv','Vorschau');pv.title=fx.pvTip||'Bis zu 8 s des Bereichs mit Effekt anhören';pv.onclick=()=>PV.src?stopPreview():previewFx(fx.id);const ap=el('button','primary','Anwenden');ap.onclick=()=>applyFx(fx.id);bt.append(pv,ap);pn.append(bt);
     it.append(pn);box.append(it);fx.el={it,info};showParams(fx)}}
 function paramChanged(fx,k){const p=FXP[fx.id];if(fx.onparam)fx.onparam(k,p,fx);lsSet('fxp',FXP);showParams(fx);updFxInfo()}
 function showParams(fx){const p=FXP[fx.id];for(const d of fx.params)if(d.show)fx.ctl[d.k].w.style.display=d.show(p)?'':'none'}
@@ -1166,7 +1289,7 @@ function openFx(id,force){const was=S.openFx===id;S.openFx=was&&!force?null:id;f
 let infoT;function updFxInfo(){clearTimeout(infoT);infoT=setTimeout(()=>{const fx=FXM[S.openFx];if(!fx||!fx.info)return;const ts=targets(true);if(!ts){fx.el.info.innerHTML='<span class="warn">Keine Spur ausgewählt</span>';return}try{fx.el.info.innerHTML=fx.info(ts)}catch(e){console.warn(e)}},180)}
 function fxRange(t,fx,p){const n=tLen(t);if(fx.id==='fin'&&!hasSel())return[0,Math.min(n,Math.round(p.dur*SR))];if(fx.id==='fout'&&!hasSel())return[Math.max(0,n-Math.round(p.dur*SR)),n];return trackRange(t)}
 async function applyFx(id){const fx=FXM[id];if(!fx||S.busy||R.on)return;const ts=targets();if(!ts)return;const p=fxParams(fx);stopAll();
-  if(fx.lenChange)return truncSync(ts,p);
+  if(fx.apply)return fx.apply(ts,p);if(fx.lenChange)return truncSync(ts,p);
   setBusy(true,fx.name+(ts.length>1?` · ${ts.length} Spuren`:'')+' …',true);await paintPause();let pushed=false;
   try{const c=fx.prepare?fx.prepare(ts,p):{};pushUndo(fx.name);pushed=true;let any=false,maxNew=0;
     for(let i=0;i<ts.length;i++){const t=ts[i],[i0,i1]=fxRange(t,fx,p);if(i1-i0<2)continue;if(ts.length>1)setBusyLabel(`${fx.name} · Spur ${i+1} von ${ts.length} …`);logFx(t,fx,p,i0,i1);
@@ -1184,7 +1307,7 @@ async function truncSync(ts,p){/* gemeinsame Pausen aller ausgewählten Spuren f
   for(const t of syncSet(ts))for(let k=cuts.length-1;k>=0;k--)removeTime(t,A+cuts[k][0]/SR,A+cuts[k][1]/SR);
   for(let k=cuts.length-1;k>=0;k--)shiftTextDel(A+cuts[k][0]/SR,A+cuts[k][1]/SR);
   if(hasSel())S.sel.b-=sum/SR;S.lastFx='trunc';changed(true);toast(`${cuts.length} Pausen gekürzt · ${nf(sum/SR,1)} s gespart${S.sync?' (alle Spuren synchron)':''}`)}
-async function previewFx(id){const fx=FXM[id];if(S.busy||R.on)return;const ts=targets();if(!ts)return;const t=ts[0],p=fxParams(fx);let[i0,i1]=fxRange(t,fx,p);
+async function previewFx(id){const fx=FXM[id];if(S.busy||R.on)return;const ts=targets();if(!ts)return;if(fx.preview)return fx.preview(ts,fxParams(fx));const t=ts[0],p=fxParams(fx);let[i0,i1]=fxRange(t,fx,p);
   if(i1-i0<2)return toast('Bereich ist leer');const M=Math.round(8*SR);if(i1-i0>M){if(fx.id==='fout')i0=i1-M;else i1=i0+M}
   setBusy(true,'Vorschau: '+fx.name+' …',true);await paintPause();try{const c=fx.prepare?fx.prepare([t],p):{};const out=await procRange(fx,p,c,t,i0,i1,progress);setBusy(false);playPreview(out,t)}catch(e){setBusy(false);toast(e.cancelled?'Vorschau abgebrochen':'Fehler: '+e.message)}}
 const paintPause=()=>new Promise(r=>setTimeout(r,40));
@@ -1403,25 +1526,34 @@ function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;
 /* ============ Ausblenden: Passage herausnehmen, aber mit der Spur aufbewahren (zurückholbar) ============
    t.hid=[{gid,at,len,seg,clr,env,txt}] – at = Stelle relativ zum Spuranfang. gid verbindet die Teile mehrerer Spuren (Sync).
    txt = ausgeblendete Kapitel/Kommentare/Untertitel (relativ zum Beginn der Passage). */
+let HIDN=0;
 function opHide(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich markieren');
-  const{a,b}=S.sel,set=syncSet(ts).filter(t=>tLen(t)&&a<tEnd(t)&&b>t.off);if(!set.length)return toast('Die Markierung liegt außerhalb des Audios');
-  stopAll();pushUndo('Ausblenden');const gid='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),txt={};
+  const{a,b}=S.sel,set=syncSet(ts).filter(t=>tLen(t));if(!set.some(t=>a<tEnd(t)&&b>t.off))return toast('Die Markierung liegt außerhalb des Audios');
+  stopAll();pushUndo('Ausblenden');const L=hideRange(set,a,b);
+  setSel(a,a);changed(true);toast(`${nf(L,1)} s ausgeblendet – über die gelbe Markierung oder „Ausgeblendete Passagen“ zurückholbar`,4000)}
+/* [a,b) ausblenden; Spuren, die erst danach beginnen, rücken mit (bleiben synchron). tag: 'umm' = gefundenes Ähm */
+function hideRange(set,a,b,tag){const gid='h'+Date.now().toString(36)+(HIDN++).toString(36)+Math.random().toString(36).slice(2,5),txt={};
   for(const k of TKEYS)txt[k]=S[k].filter(it=>it.a>=a-1e-6&&it.b<=b+1e-6).map(it=>({...it,a:it.a-a,b:it.b-a}));
-  let L=0;for(const t of set){const n=tLen(t),i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1<=i0)continue;
+  let L=0;for(const t of set){if(!(a<tEnd(t)&&b>t.off)){if(t.off>=b){logOp([t],{k:'del',a,b});removeTime(t,a,b)}continue}
+    const n=tLen(t),i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1<=i0)continue;
     const la=i0/SR,lb=i1/SR,seg=t.ch.map(s=>s.sub(i0,i1)),pcs=aPieces(clrAbs(t),t.off+la,t.off+lb,null),env=(t.env||[]).filter(q=>q.t>=la-1e-6&&q.t<=lb+1e-6).map(q=>({t:q.t-la,db:q.db}));
     logOp([t],{k:'del',a,b});removeTime(t,a,b);
-    t.hid=(t.hid||[]).concat([{gid,at:Math.round(la*1e4)/1e4,len:(i1-i0)/SR,seg,clr:pcs,env,txt}]).sort((x,y)=>x.at-y.at);L=Math.max(L,(i1-i0)/SR)}
-  for(const k of TKEYS)S[k]=S[k].filter(it=>!(it.a>=a-1e-6&&it.b<=b+1e-6));shiftTextDel(a,b);
-  setSel(a,a);changed(true);toast(`${nf(L,1)} s ausgeblendet – über die gelbe Markierung oder „Ausgeblendete Passagen“ zurückholbar`,4000)}
+    t.hid=(t.hid||[]).concat([{gid,at:Math.round(la*1e4)/1e4,len:(i1-i0)/SR,seg,clr:pcs,env,txt,...(tag?{tag}:{})}]).sort((x,y)=>x.at-y.at);L=Math.max(L,(i1-i0)/SR)}
+  for(const k of TKEYS)S[k]=S[k].filter(it=>!(it.a>=a-1e-6&&it.b<=b+1e-6));shiftTextDel(a,b);return L}
 const hidParts=gid=>S.tracks.map(t=>[t,(t.hid||[]).find(h=>h.gid===gid)]).filter(x=>x[1]);
-function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!parts.length)return;stopAll();pushUndo('Wieder einblenden');let P=null,L=0,txt=null;
+function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!parts.length)return;stopAll();pushUndo('Wieder einblenden');const{P,L}=restoreHidCore(parts);
+  S.tracks.forEach(x=>x.sel=parts.some(p=>p[0]===x));setSel(P,P+L);changed(true);toast(`${nf(L,1)} s wieder eingeblendet`)}
+function restoreHidCore(parts){let P=null,L=0,txt=null;
   for(const[t,h]of parts){const at=t.off+h.at,off0=t.off,dAbs=clrAbs(t),NL=h.seg[0].length;if(P==null){P=at;txt=h.txt}L=Math.max(L,h.len);
     t.hid=t.hid.filter(x=>x!==h);logOp([t],{k:'paste',a:at,b:at,len:Math.round(h.len*1e4)/1e4});
     insertAt(t,at,h.seg,true);remapCuts(t,off0,x=>x>at+1e-9?x+NL/SR:x);clrFromAbs(t,aIns(dAbs,at,NL/SR,h.clr));
     if(h.env&&h.env.length){const l0=at-t.off;t.env=(t.env||[]).concat(h.env.map(q=>({t:q.t+l0,db:q.db}))).sort((x,y)=>x.t-y.t)}
     const len=tLen(t)/SR,c=(t.cuts||[]).slice();for(const p of[at,at+NL/SR]){const l=p-t.off;if(l>.001&&l<len-.001&&!c.some(x=>Math.abs(x-l)<.002))c.push(l)}t.cuts=c.sort((x,y)=>x-y)}
   shiftTextIns(P,L);if(txt){for(const k of TKEYS)for(const it of txt[k]||[])S[k].push({...it,a:it.a+P,b:it.b+P});for(const k of TKEYS)sortT(k)}
-  S.tracks.forEach(x=>x.sel=parts.some(p=>p[0]===x));setSel(P,P+L);changed(true);toast(`${nf(L,1)} s wieder eingeblendet`)}
+  return{P,L}}
+function restoreTag(tag){if(!editable())return;const pos=g=>{const p=hidParts(g)[0];return p[0].off+p[1].at};
+  const gids=[...new Set(S.tracks.flatMap(t=>(t.hid||[]).filter(h=>h.tag===tag).map(h=>h.gid)))].sort((x,y)=>pos(y)-pos(x));if(!gids.length)return;
+  stopAll();pushUndo('Ähms wieder einblenden');let L=0;for(const g of gids)L+=restoreHidCore(hidParts(g)).L;setSel(S.sel.a,S.sel.a);changed(true);toast(`${gids.length} Ähms wieder eingeblendet · ${nf(L,1)} s`)}
 async function deleteHid(gid){const parts=hidParts(gid);if(!parts.length)return;
   if(!await confirmBox('Endgültig löschen?',`Die ausgeblendete Passage (${nf(parts[0][1].len,1)} s) wird endgültig entfernt und lässt sich danach nur noch mit Strg+Z zurückholen.`,'Löschen'))return;
   pushUndo('Ausgeblendete Passage löschen');for(const[t,h]of parts)t.hid=t.hid.filter(x=>x!==h);changed(true);toast('Ausgeblendete Passage gelöscht')}
@@ -1431,10 +1563,11 @@ function hidMenu(gid,x,y){ctxMenu(x,y,[['↺ Wieder einblenden',()=>restoreHid(g
 let hidSig='';
 function renderHid(){const box=$('#hidList');if(!box)return;const groups=new Map();for(const t of S.tracks)for(const h of t.hid||[]){if(!groups.has(h.gid))groups.set(h.gid,{h,t,names:[]});groups.get(h.gid).names.push(t.name)}
   const sig=[...groups.values()].map(g=>g.h.gid+'@'+(g.t.off+g.h.at).toFixed(3)+':'+g.names.join('|')).join(',');if(sig===hidSig)return;hidSig=sig;box.innerHTML='';
-  if(!groups.size){box.style.display='none';return}box.style.display='';box.append(el('div','hh','Ausgeblendete Passagen'));
-  const list=[...groups.values()].sort((x,y)=>(x.t.off+x.h.at)-(y.t.off+y.h.at));
+  if(!groups.size){box.style.display='none';return}box.style.display='';const hh=el('div','hh','Ausgeblendete Passagen');box.append(hh);
+  const list=[...groups.values()].sort((x,y)=>(x.t.off+x.h.at)-(y.t.off+y.h.at)),nu=list.filter(g=>g.h.tag==='umm').length;
+  if(nu>1){const ab=el('span','all',`↺ alle ${nu} Ähms`);ab.title='Alle ausgeblendeten Ähms auf einmal zurückholen (Strg+Z macht es rückgängig)';ab.onclick=()=>restoreTag('umm');hh.append(ab)}
   for(const g of list){const d=el('div','hr');d.innerHTML=`<span class="eo">${I.eyeoff}</span><span class="tx"></span><span class="b">↺</span><span class="b">▶</span><span class="b del">×</span>`;
-    $('.tx',d).textContent=`${fmtT(g.t.off+g.h.at)} · ${nf(g.h.len,1)} s · ${g.names.join(', ')}`;
+    $('.tx',d).textContent=`${g.h.tag==='umm'?'Ähm · ':''}${fmtT(g.t.off+g.h.at)} · ${nf(g.h.len,1)} s · ${g.names.join(', ')}`;
     const[bR,bP,bD]=d.querySelectorAll('.b');bR.title='Wieder einblenden (an der gelben Markierung)';bP.title='Anhören';bD.title='Endgültig löschen';
     bR.onclick=()=>restoreHid(g.h.gid);bP.onclick=()=>previewHid(g.h.gid);bD.onclick=()=>deleteHid(g.h.gid);
     d.querySelector('.tx').onclick=()=>{moveCur(g.t.off+g.h.at);ensureVisible(g.t.off+g.h.at)};d.querySelector('.tx').title='Zur Stelle springen';box.append(d)}}
@@ -1535,10 +1668,11 @@ function envDown(e,t,tw){if(!tLen(t))return;const r=tw.getBoundingClientRect(),H
 function toggleEnv(){S.envMode=!S.envMode;document.body.classList.toggle('envmode',S.envMode);updTransport();invalidate();if(!S.envMode)envSelClear();toast(S.envMode?'Hüllkurve: Klick auf die Linie setzt Punkte, Linie ziehen verschiebt das Stück · daneben ziehen wählt mehrere aus (Entf löscht) · im markierten Bereich hoch/runter ziehen = Passage lauter/leiser':'Hüllkurve aus',S.envMode?6000:2000)}
 function envTargets(){const ts=(S.tracks.filter(t=>t.sel).length?S.tracks.filter(t=>t.sel):[byId(S.focus)].filter(Boolean)).filter(t=>t.env&&t.env.length);if(!ts.length)toast('Keine Hüllkurve auf den ausgewählten Spuren');return ts}
 /* Effekt auf [i0,i1) anwenden. Gates mit Option „als Hüllkurve“ ändern das Audio nicht, sondern setzen Hüllkurvenpunkte. */
-/* Blende als Hüllkurve: Kurvenform mit wenigen Punkten nachbilden (Signal-linear 10, S-Kurve 6, Lautstärke-linear 1 Abschnitt –
+/* Blende als Hüllkurve: Kurvenform mit wenigen Punkten nachbilden (Signal-linear 10, Gleichmäßig gehört 8, S-Kurve 6, Gerade dB 1 Abschnitt –
    die Hüllkurve verläuft zwischen Punkten in dB gerade) und zur vorhandenen Hüllkurve addieren. Außerhalb der Blende bleibt alles, wie es war. */
-const fadeG=(curve,x)=>curve==='lin'?x:curve==='s'?.5-.5*Math.cos(Math.PI*x):(x<=0?0:Math.pow(10,(x-1)*3));
-function fadeToEnv(t,i0,i1,curve,isIn){const a=i0/SR,b=i1/SR,len=tLen(t)/SR,eps=.001;if(b-a<.005)return 0;const n=curve==='lin'?10:curve==='s'?6:1,G=[];/* Lautstärke-linear = gerade Linie (2 Punkte) */
+/* hear: empfundene Lautheit steigt gleichmäßig (Sone ~ Anteil x → Pegel 10·log2(x) dB, Mitte = halb so laut ≈ −10 dB) */
+const fadeG=(curve,x)=>curve==='lin'?x:curve==='s'?.5-.5*Math.cos(Math.PI*x):curve==='hear'?(x<=0?0:Math.pow(x,Math.log2(10)/2)):(x<=0?0:Math.pow(10,(x-1)*3));
+function fadeToEnv(t,i0,i1,curve,isIn){const a=i0/SR,b=i1/SR,len=tLen(t)/SR,eps=.001;if(b-a<.005)return 0;const n=curve==='lin'?10:curve==='hear'?8:curve==='s'?6:1,G=[];/* Lautstärke-linear = gerade Linie (2 Punkte) */
   if(isIn&&a>eps)G.push({t:a-eps,db:0});/* davor unverändert (Sprung erst ab Blendenbeginn) */
   for(let k=0;k<=n;k++){const x=k/n,g=fadeG(curve,isIn?x:1-x);G.push({t:a+(b-a)*x,db:g<=1e-5?ENV_MIN:Math.max(ENV_MIN,20*Math.log10(g))})}
   if(!isIn&&b<len-eps)G.push({t:b+eps,db:0});/* danach wieder unverändert */
@@ -1952,8 +2086,8 @@ const PMAGIC='AEPROJ01';
 function updTitle(){const n=S.projName||'Unbenannt';$('#pname').innerHTML=esc(n)+(S.dirty&&S.tracks.length?'<b title="Ungespeicherte Änderungen">•</b>':'');document.title=(S.dirty&&S.tracks.length?'• ':'')+n+' – Podcast Editor'}
 /* Projektdatei stückweise schreiben (Kopf, dann jeden Block) – nie das ganze Projekt auf einmal im Speicher */
 async function writeProject(write,onp){const order=[],tracks=[];let off=0;
-  for(const t of S.tracks){tracks.push({id:t.id,name:t.name,off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h,cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,clr:t.clr||[],ch:t.ch.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o}),
-    hid:(t.hid||[]).map(h=>({gid:h.gid,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,ch:h.seg.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o})}))})}
+  for(const t of S.tracks){tracks.push({id:t.id,name:t.name,off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h,cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,umm:t.umm||null,clr:t.clr||[],ch:t.ch.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o}),
+    hid:(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,ch:h.seg.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o})}))})}
   const head={app:'Audio Editor',v:1,sr:SR,saved:new Date().toISOString(),tid:TID,mid:MID,sel:S.sel,view:S.view,sync:S.sync,marks:S.marks,notes:S.notes,subs:S.subs,lanes:S.lanesOn,noise:S.noise?{dur:S.noise.dur,pow:Array.from(S.noise.pow)}:null,tracks};
   const js=new TextEncoder().encode(JSON.stringify(head)),pre=new Uint8Array(16);pre.set(new TextEncoder().encode(PMAGIC));new DataView(pre.buffer).setUint32(8,js.length,true);
   await write(pre);await write(js);await write(new Uint8Array((4-(16+js.length)%4)%4));let done=0;
@@ -2052,8 +2186,8 @@ async function saveSessionLocked(){
   const have=new Set(await idb.keys());/* was wirklich im Speicher liegt – Blöcke mit ID, die fehlen, werden neu geschrieben */
   /* pro Block speichern: nur Blöcke ohne ID sind neu; in kleinen Paketen mit Pausen schreiben, damit nichts hängt */
   const fresh=[],refCh=chs=>chs.map(s=>s.b.map(blk=>{let id=AID.get(blk);if(!id||!have.has(id)){id=id||'a:'+(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random());fresh.push([id,blk]);have.add(id);AID.set(blk,id)}return id})),ref=t=>refCh(t.ch);
-  const hidOut=t=>(t.hid||[]).map(h=>({gid:h.gid,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,segB:refCh(h.seg),segN:h.seg.map(s=>s.b.map(x=>x.length))}));
-  const tracks=S.tracks.map(t=>({id:t.id,name:t.name,hid:hidOut(t),chB:ref(t),chN:t.ch.map(s=>s.b.map(blk=>blk.length)),cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,clr:t.clr||[],off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h}));
+  const hidOut=t=>(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,segB:refCh(h.seg),segN:h.seg.map(s=>s.b.map(x=>x.length))}));
+  const tracks=S.tracks.map(t=>({id:t.id,name:t.name,hid:hidOut(t),chB:ref(t),chN:t.ch.map(s=>s.b.map(blk=>blk.length)),cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,umm:t.umm||null,clr:t.clr||[],off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h}));
   try{for(let i=0;i<fresh.length;i+=8){await idb.putMany(fresh.slice(i,i+8).map(([id,blk])=>[id,blk.slice()]));await yieldUI()}/* slice: nur die Bytes des Blocks, nicht den ganzen Puffer */
     let list=(await sesList()).filter(e=>e.sid!==sid);list.unshift({sid,name:sesName(),n:S.tracks.length,dur:projDur(),saved:Date.now(),bytes:projBytes()});
     const drop=list.slice(SES_MAX);list=list.slice(0,SES_MAX);

@@ -7,7 +7,7 @@ Ein schlanker Audio-Editor für Podcasts und Sprachaufnahmen, der komplett im Br
 - Mehrere Spuren mit Stumm, Solo, Sperren, Lautstärke, Panorama und Lautheitsanzeige (LUFS)
 - Schneiden, Passagen per Ziehen verschieben (auch zwischen Spuren), Sync über alle Spuren, Magnete an Schnitten
 - Hüllkurve zum Lauter-/Leisermachen einzelner Stellen
-- Effekte: **Sprache optimieren** (ein Klick), Rauschreduzierung, Rauschsperre, Atmer & Übersprechen entfernen, Normalisieren (auch abschnittsweise), Kompressor, EQ, Stille kürzen, Blenden
+- Effekte: **Sprache optimieren** (ein Klick), Rauschreduzierung, Pausen absenken (Noise Gate), Atmer & Übersprechen entfernen, Ähms entfernen (am Klang erkannt, zurückholbar), Normalisieren (auch abschnittsweise), Kompressor, EQ, Stille kürzen, Blenden
 - Kapitel, Kommentare (mit Emoji-Schnellmarken) und Untertitel (SRT/VTT)
 - Aufnahme direkt im Editor, Wahl von Ein- und Ausgabegerät
 - Export als MP3 oder WAV (mit Kapiteln), Projekte speichern (`.aeproj`), Audacity-Projekte (`.aup3`) öffnen

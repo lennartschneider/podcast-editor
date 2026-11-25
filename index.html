@@ -470,6 +470,11 @@ const I={
  filt:SV('<path d="M4 2v12M8 2v12M12 2v12" stroke-opacity=".5"/><path d="M2.5 10h3M6.5 5h3M10.5 8.5h3"/>'),/* EQ-Schieber */
  gate:SV('<path d="M1.5 8h1.5l1-3.5 1.2 7 1.2-5 .9 1.5H9"/><path d="M10.5 3.5v9"/><path d="M12.5 8h2" stroke-opacity=".55"/>'),
  xgate:SV('<path d="M1.5 5h2.5l1-2.5 1.2 5 1.2-4 1 1.5h6"/><path d="M1.5 11.5h3M11.5 11.5h3"/><path d="M6 9.5v4M10 9.5v4"/>'),
+ declip:SV('<path d="M1.5 10.5 3.6 5.5h3.2l2.2 6 2.2-6h3.3"/><path d="M3.6 5.5 5.2 2.8 6.8 5.5" stroke-dasharray="1.2 1.2"/>'),
+ deess:SV('<path d="M10.8 4.6c-.6-1.2-2-1.8-3.4-1.6C5.9 3.2 5 4.2 5.3 5.5c.5 2.2 5.4 1.8 5.4 4.5 0 1.6-1.5 2.6-3.2 2.5-1.3 0-2.4-.7-2.9-1.8"/><path d="M13.5 13.5l-11-11" stroke-opacity=".5"/>'),
+ dehum:SV('<path d="M1.5 8c1.1-2.8 2.2-2.8 3.3 0s2.2 2.8 3.3 0 2.2-2.8 3.3 0"/><path d="M13.8 3.5v9" stroke-opacity=".55"/>'),
+ mouth:SV('<path d="M2 8c2-2.6 4-3.1 6-1.6C10 4.9 12 5.4 14 8c-2 2.6-4 3.6-6 3.6S4 10.6 2 8z"/><path d="M2.3 8h11.4" stroke-opacity=".5"/>'),
+ match:SV('<path d="M1.5 5c3 0 4 3 6.5 3s3.5-3 6.5-3"/><path d="M1.5 11c3 0 4-3 6.5-3s3.5 3 6.5 3" stroke-opacity=".55"/>'),
  grip:SV('<circle cx="6" cy="4" r=".9"/><circle cx="10" cy="4" r=".9"/><circle cx="6" cy="8" r=".9"/><circle cx="10" cy="8" r=".9"/><circle cx="6" cy="12" r=".9"/><circle cx="10" cy="12" r=".9"/>'),
  cut:SV('<circle cx="4.5" cy="11.5" r="2"/><circle cx="11.5" cy="11.5" r="2"/><path d="M5.8 10 12.3 2.5M10.2 10 3.7 2.5"/>'),
  copy:SV('<rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 5.5V3.9c0-.8-.6-1.4-1.4-1.4H3.9c-.8 0-1.4.6-1.4 1.4v5.2c0 .8.6 1.4 1.4 1.4h1.6"/>'),
@@ -984,6 +989,7 @@ function biq(type,f,gain,q=.7071){const w=2*Math.PI*Math.min(f,SR*.49)/SR,cs=Mat
   if(type==='hp'){b0=(1+cs)/2;b1=-(1+cs);b2=b0;a0=1+al;a1=-2*cs;a2=1-al}
   else if(type==='lp'){b0=(1-cs)/2;b1=1-cs;b2=b0;a0=1+al;a1=-2*cs;a2=1-al}
   else if(type==='pk'){b0=1+al*A;b1=-2*cs;b2=1-al*A;a0=1+al/A;a1=-2*cs;a2=1-al/A}
+  else if(type==='notch'){b0=1;b1=-2*cs;b2=1;a0=1+al;a1=-2*cs;a2=1-al}
   else{const s=2*Math.sqrt(A)*al;if(type==='ls'){b0=A*((A+1)-(A-1)*cs+s);b1=2*A*((A-1)-(A+1)*cs);b2=A*((A+1)-(A-1)*cs-s);a0=(A+1)+(A-1)*cs+s;a1=-2*((A-1)+(A+1)*cs);a2=(A+1)+(A-1)*cs-s}
     else{b0=A*((A+1)+(A-1)*cs+s);b1=-2*A*((A-1)+(A+1)*cs);b2=A*((A+1)+(A-1)*cs-s);a0=(A+1)-(A-1)*cs+s;a1=2*((A-1)-(A+1)*cs);a2=(A+1)-(A-1)*cs-s}}
   return[b0/a0,b1/a0,b2/a0,a1/a0,a2/a0]}
@@ -1155,6 +1161,80 @@ async function ummLearn(){if(!editable())return;if(!hasSel())return toast('Erst 
   scheduleSave();updFxInfo();toast(`Ähm-Beispiel gespeichert für „${names.join('“, „')}“ – die Suche achtet jetzt auf diese Stimme`,4500)}
 function ummForget(){const ts=targets(true)||[];let n=0;for(const t of ts)if(t.umm){delete t.umm;n++}if(!n)return toast('Für diese Spur ist kein Beispiel gespeichert');scheduleSave();updFxInfo();toast('Ähm-Beispiel gelöscht')}
 
+/* ============ Reparatur-Filter für Sprache (klassische Signalverarbeitung, keine KI) ============ */
+const monoOf=seg=>{if(seg.length===1)return seg[0].slice();const n=seg[0].length,m=new Float32Array(n);for(const a of seg)for(let i=0;i<n;i++)m[i]+=a[i]/seg.length;return m};
+/* Blockweise verarbeiten (spart Speicher bei langen Aufnahmen): fn(teil,k0,k1) bearbeitet das Stück, zurückgeschrieben wird nur [k0,k1) */
+async function blockwise(seg,fn,onp){const n=seg[0].length,B=SR*10,mg=Math.round(SR*.3);let r=0;
+  for(let s=0;s<n;s+=B){const a0=Math.max(0,s-mg),a1=Math.min(n,s+B+mg),k1=Math.min(n,s+B)-a0,part=seg.map(a=>a.slice(a0,a1));r+=fn(part,s-a0,k1)||0;
+    for(let c=0;c<seg.length;c++)seg[c].set(part[c].subarray(s-a0,k1),s);if(onp)onp(Math.min(1,(s+B)/n));await yieldUI()}return r}
+
+/* ---- Übersteuerung: abgeschnittene (flache) Spitzen finden und aus dem Verlauf davor/danach nachbilden ---- */
+function clipRuns(a,lv,fix){let n=0,runs=0;const N=a.length;
+  for(let i=0;i<N;){const v=a[i];if((v<0?-v:v)<lv){i++;continue}const sg=v<0?-1:1;let e=i+1;while(e<N&&(sg*a[e])>=lv)e++;
+    if(e-i>=2){n+=e-i;runs++;if(fix&&i>=2&&e+1<N){const p0=a[i-1],p1=a[e],L=e-(i-1),m0=(a[i-1]-a[i-2])*L,m1=(a[e+1]-a[e])*L,cap=lv*2.5;
+      for(let k=i;k<e;k++){const t=(k-(i-1))/L,t2=t*t,t3=t2*t,v2=(2*t3-3*t2+1)*p0+(t3-2*t2+t)*m0+(-2*t3+3*t2)*p1+(t3-t2)*m1;a[k]=sg*Math.min(cap,Math.max(sg*v2,sg*a[k]))}}}
+    i=e}return{n,runs}}
+const peakAbs=a=>{let p=0;for(let i=0;i<a.length;i++){const v=a[i]<0?-a[i]:a[i];if(v>p)p=v}return p};
+function declip(seg,thrFrac){let n=0,runs=0;for(const a of seg){const pk=peakAbs(a);if(pk<1e-4)continue;const r=clipRuns(a,pk*thrFrac,true);n+=r.n;runs+=r.runs}return{n,runs,pct:n/Math.max(1,seg[0].length*seg.length)*100}}
+async function clipStats(t,i0,i1,thrFrac){let pk=0;for(const s of t.ch)for(const[c]of s.chunks(i0,i1)){const v=peakAbs(c);if(v>pk)pk=v}if(pk<1e-4)return{pct:0,runs:0};
+  let n=0,runs=0,k=0;for(const s of t.ch)for(const[c]of s.chunks(i0,i1)){const r=clipRuns(c,pk*thrFrac,false);n+=r.n;runs+=r.runs;if(++k%40===0)await yieldUI()}
+  return{pct:n/Math.max(1,(i1-i0)*t.ch.length)*100,runs}}
+
+/* ---- Zischlaute dämpfen: nur wenn der Höhenanteil plötzlich die Stimme dominiert, wird er kurz leiser ---- */
+function deessPart(part,p){const n=part[0].length,f=p.freq,thr=-2-p.sens/100*12,R=p.red,sc=monoOf(part),hp=sc.slice();runBiq(hp,biq('hp',f,0,.7071));runBiq(hp,biq('hp',f,0,.7071));
+  const aA=Math.exp(-1/(.0015*SR)),aR=Math.exp(-1/(.05*SR)),gA=Math.exp(-16/(.001*SR)),gR=Math.exp(-16/(.06*SR)),gain=new Float32Array(Math.ceil(n/16)+1);let eh=0,ef=0,g=0,cnt=0;
+  for(let i=0;i<n;i++){const h2=hp[i]*hp[i],f2=sc[i]*sc[i];eh=h2>eh?h2+(eh-h2)*aA:h2+(eh-h2)*aR;ef=f2>ef?f2+(ef-f2)*aA:f2+(ef-f2)*aR;
+    if((i&15)===0){const d=10*Math.log10((eh+1e-12)/(ef+1e-12)),want=ef>1e-8?Math.min(R,Math.max(0,(d-thr)*2)):0;g=want>g?want+(g-want)*gA:want+(g-want)*gR;gain[i>>4]=g;if(g>1)cnt++}}
+  for(const a of part){const l=a.slice();runBiq(l,biq('lp',f,0,.5412));runBiq(l,biq('lp',f,0,1.3066));for(let i=0;i<n;i++){const gd=gain[i>>4];if(gd>.05)a[i]-=(a[i]-l[i])*(1-Math.pow(10,-gd/20))}}/* Höhen = Signal − Tiefpass: passt exakt zusammen */
+  return cnt*16}
+
+/* ---- Brummen: Netzfrequenz (50/60 Hz, genau eingemessen) und ihre Obertöne mit sehr schmalen Kerbfiltern entfernen ---- */
+function goertzel(a,f,i0,i1){const c=2*Math.cos(2*Math.PI*f/SR);let s1=0,s2=0;for(let i=i0;i<i1;i++){const s0=a[i]+c*s1-s2;s2=s1;s1=s0}return(s1*s1+s2*s2-c*s1*s2)/Math.max(1,i1-i0)}
+async function humDetect(a){const n=a.length,W=Math.min(n,SR*20),i0=Math.max(0,(n-W)>>1),i1=i0+W;if(W<SR*2)return{f0:50,db:0};let best={f0:50,e:0};
+  for(const base of[50,60])for(let f=base-.5;f<=base+.5001;f+=.05){let e=0;for(const k of[1,2,3,4])e+=goertzel(a,f*k,i0,i1);if(e>best.e)best={f0:Math.round(f*100)/100,e}}
+  await yieldUI();let nb=0;for(const k of[1,2,3,4])for(const d of[-3.2,-2.1,2.1,3.2])nb+=goertzel(a,best.f0*k+d,i0,i1);return{f0:best.f0,db:10*Math.log10((best.e+1e-20)/(nb/4+1e-20))}}
+function dehumApply(seg,f0,harm,Q){let k=0;for(let h=1;h<=harm&&f0*h<SR/2-200;h++){k++;const c=biq('notch',f0*h,0,Q*(h===1?.6:1));for(const a of seg)runBiq(a,c)}return k}
+
+/* ---- Popp-Laute (p, b): tiefe Luftstöße – nur dann die Bässe unter 100 Hz wegnehmen ---- */
+function depopPart(part,sens){const n=part[0].length,sc=monoOf(part),lf=sc.slice(),mid=sc.slice();runBiq(lf,biq('lp',90,0,.5412));runBiq(lf,biq('lp',90,0,1.3066));runBiq(mid,biq('hp',150,0,.7071));runBiq(mid,biq('lp',1500,0,.7071));
+  /* 1) Stellen, an denen die tiefsten Töne die Stimme überragen; 2) nur zählen, wenn das mind. 8 ms anhält (Luftstoß, kein harter Einsatz) */
+  const a5=Math.exp(-1/(.005*SR)),thr=3-sens/100*8,on=new Uint8Array(n);let el=0,em=0,pk=0;for(let i=0;i<n;i++){const v=sc[i]<0?-sc[i]:sc[i];if(v>pk)pk=v}const floor=Math.max(1e-6,pk*pk*.002);
+  for(let i=0;i<n;i++){el=lf[i]*lf[i]+(el-lf[i]*lf[i])*a5;em=mid[i]*mid[i]+(em-mid[i]*mid[i])*a5;on[i]=el>floor&&10*Math.log10((el+1e-12)/(em+1e-12))>thr?1:0}
+  const minL=Math.round(.008*SR),hold=Math.round(.03*SR),tgt=new Uint8Array(n);let pops=0;
+  for(let i=0;i<n;){if(!on[i]){i++;continue}let e=i;while(e<n&&on[e])e++;if(e-i>=minL){pops++;const s0=Math.max(0,i-Math.round(.005*SR)),s1=Math.min(n,e+hold);for(let k=s0;k<s1;k++)tgt[k]=1}i=e}
+  if(!pops)return 0;const gA=Math.exp(-1/(.001*SR)),gR=Math.exp(-1/(.08*SR)),gain=new Float32Array(n);let g=0;for(let i=0;i<n;i++){const w=tgt[i];g=w>g?w+(g-w)*gA:w+(g-w)*gR;gain[i]=g}
+  for(const a of part){const h=a.slice();runBiq(h,biq('hp',100,0,.5412));runBiq(h,biq('hp',100,0,1.3066));for(let i=0;i<n;i++)if(gain[i]>.01)a[i]-=(a[i]-h[i])*gain[i]*.95}/* Bässe = Signal − Hochpass */
+  return pops}
+/* ---- Schmatz-/Klickgeräusche: sehr kurze Knackser (unter ~1,5 ms) in den Höhen finden und dort die Höhen weich ausblenden ---- */
+function declickPart(part,sens,k0,k1){const n=part[0].length,hp=monoOf(part);runBiq(hp,biq('hp',2500,0,.7071));runBiq(hp,biq('hp',2500,0,.7071));
+  const ps=new Float64Array(n+1);for(let i=0;i<n;i++)ps[i+1]=ps[i]+hp[i]*hp[i];const W=Math.round(.015*SR),G=Math.round(.002*SR),S3=Math.round(.003*SR),maxSpan=.0015*SR,K=14-sens/100*8,w=Math.round(.0007*SR),hits=[];
+  /* Knackser muss auf BEIDEN Seiten deutlich herausragen – bei „t“/„k“ folgt direkt ein Hauchgeräusch, bei Mundklicks nicht */
+  const side=(x0,x1)=>Math.sqrt((ps[x1]-ps[x0])/Math.max(1,x1-x0))+1e-9;
+  for(let i=Math.max(W,k0);i<Math.min(n-W,k1);i++){const v=Math.abs(hp[i]);if(v<2e-3)continue;if(v<K*.7*Math.max(side(i-W,i-G),side(i+G,i+W)))continue;
+    let pk=i;for(let j=i;j<Math.min(n,i+G);j++)if(Math.abs(hp[j])>Math.abs(hp[pk]))pk=j;const A=Math.abs(hp[pk]);let span=0;for(let j=pk-S3;j<pk+S3;j++)if(Math.abs(hp[j])>.35*A)span++;
+    if(span<=maxSpan)hits.push(pk);i=pk+G}
+  for(const a of part){const l=a.slice();runBiq(l,biq('lp',2500,0,.5412));runBiq(l,biq('lp',2500,0,1.3066));for(const c of hits)for(let j=-w;j<=w;j++){const x=c+j;if(x<0||x>=n)continue;a[x]-=(a[x]-l[x])*(.5+.5*Math.cos(Math.PI*j/w))}}
+  return hits.length}
+
+/* ---- Klang angleichen: Langzeit-Spektrum der Sprache beider Spuren vergleichen → sanfter EQ (linearphasiges FIR) ---- */
+const LTAS=new WeakMap(),MB=Array.from({length:24},(_,k)=>1000*Math.pow(2,(k-12)/3));/* Terzbänder 63 Hz … 12,7 kHz */
+function ltas(t){const key=t.ch[0];if(LTAS.has(key))return LTAS.get(key);const pr=(async()=>{const N=4096,fft=makeFFT(N),win=hann(N),n=tLen(t),st=await trackStats(t.ch),thr=st.ok?st.thr+4:-50;
+    const nF=Math.floor(n/N),stride=Math.max(1,Math.floor(nF/3000)),P=new Float64Array(N/2+1),re=new Float64Array(N),im=new Float64Array(N);let cnt=0,tm=performance.now();
+    for(let f=0;f<nF;f+=stride){const i0=f*N,blk=t.ch.map(q=>q.slice(i0,i0+N));let e=0;for(let i=0;i<N;i++){let v=0;for(const b of blk)v+=b[i];v/=blk.length;re[i]=v*win[i];im[i]=0;e+=v*v}
+      if(10*Math.log10(e/N+1e-13)<thr)continue;fft.fwd(re,im);for(let b=0;b<=N/2;b++)P[b]+=re[b]*re[b]+im[b]*im[b];cnt++;if(performance.now()-tm>30){await yieldUI();tm=performance.now()}}
+    if(cnt<15)return null;const band=MB.map(fc=>{const lo=Math.max(1,Math.floor(fc/Math.pow(2,1/6)*N/SR)),hi=Math.min(N/2,Math.ceil(fc*Math.pow(2,1/6)*N/SR));let s=0,c=0;for(let b=lo;b<=hi;b++){s+=P[b];c++}return 10*Math.log10(s/Math.max(1,c)/cnt+1e-20)});
+    return{band,cnt}})();LTAS.set(key,pr);pr.catch(()=>LTAS.delete(key));return pr}
+function matchGains(ref,tar,p){const d=MB.map((_,k)=>ref.band[k]-tar.band[k]);let s=0,w=0;MB.forEach((fc,k)=>{if(fc>=200&&fc<=4000){s+=d[k];w++}});const off=s/Math.max(1,w);
+  const raw=d.map((v,k)=>{let g=(v-off)*p.amt/100;if(MB[k]<80||MB[k]>10000)g*=.5;return clamp(g,-p.max,p.max)});return raw.map((v,k)=>(raw[Math.max(0,k-1)]+2*v+raw[Math.min(raw.length-1,k+1)])/4)}
+function firFromBands(g){const N=4096,M=2047,fft=makeFFT(N),re=new Float64Array(N),im=new Float64Array(N),lg=MB.map(f=>Math.log2(f));
+  for(let b=0;b<=N/2;b++){const f=Math.max(1,b*SR/N),x=Math.log2(f);let db;if(x<=lg[0])db=g[0];else if(x>=lg[lg.length-1])db=g[g.length-1];else{let k=0;while(lg[k+1]<x)k++;const u=(x-lg[k])/(lg[k+1]-lg[k]);db=g[k]+(g[k+1]-g[k])*u}
+    re[b]=db2lin(db);if(b>0&&b<N/2)re[N-b]=re[b]}fft.inv(re,im);const h=new Float32Array(M),D=(M-1)>>1;for(let j=0;j<M;j++){const w=.5-.5*Math.cos(2*Math.PI*j/(M-1));h[j]=re[(j-D+N)%N]*w}return h}
+async function firApply(a,h,onp){const M=h.length,L=8192,B=L-M+1,D=(M-1)>>1,n=a.length,fft=makeFFT(L),kr=new Float64Array(L),ki=new Float64Array(L);for(let j=0;j<M;j++)kr[j]=h[j];fft.fwd(kr,ki);
+  const re=new Float64Array(L),im=new Float64Array(L),acc=new Float64Array(L+B);let tm=performance.now();
+  for(let s=0;s-D<n;s+=B){re.fill(0);im.fill(0);for(let i=0;i<B&&s+i<n;i++)re[i]=a[s+i];fft.fwd(re,im);for(let b=0;b<L;b++){const x=re[b],y=im[b];re[b]=x*kr[b]-y*ki[b];im[b]=x*ki[b]+y*kr[b]}fft.inv(re,im);
+    for(let i=0;i<L;i++)acc[i]+=re[i];for(let i=0;i<B;i++){const o=s+i-D;if(o>=0&&o<n)a[o]=acc[i]}acc.copyWithin(0,B);acc.fill(0,L);
+    if(performance.now()-tm>30){await yieldUI();tm=performance.now();if(onp)onp(Math.min(1,s/n))}}}
+
 /* ============================== Effekte ============================== */
 const CURVES=[['hear','Gleichmäßig (gehört)'],['db','Gerade (dB)'],['lin','Linear (Signal)'],['s','Weich (S-Kurve)']];/* db = gleichmäßig in dB (wie man hört), lin = gleichmäßig in der Signalhöhe */
 const FDEF={hp:80,lp:9000,ls:150,hs:6000,pk:3000};
@@ -1163,20 +1243,70 @@ const FX=[
 {id:'enh',name:'Sprache optimieren',icon:'enh',star:true,key:'Auto',
  desc:'Ein Klick wie „Enhance Speech“: entfernt Brummen und Rauschen, macht die Stimme klarer, gleicht Lautstärke aus und bringt alles auf Podcast-Pegel. (Klassische Signalverarbeitung, keine KI.)',
  params:[{k:'str',l:'Stärke',type:'sel',opts:[['leicht','Leicht'],['mittel','Mittel'],['stark','Stark']],def:'mittel'},{k:'lufs',l:'Ziel-Lautheit',min:-24,max:-12,step:.5,def:-16,u:'LUFS'},
-  {k:'nr',l:'Rauschen entfernen',type:'chk',def:true},{k:'lev',l:'Lautstärke-Schwankungen ausgleichen (Leveler)',type:'chk',def:true},{k:'eq',l:'Klang: Mulm weg, Präsenz & Luft',type:'chk',def:false},{k:'comp',l:'Dynamik glätten (Kompressor)',type:'chk',def:false}],
- handle:.5,info:ts=>scopeTxt(ts)+'<br>Kette: Hochpass → Rauschreduzierung → EQ → Leveler → Kompressor → Lautheit → weicher Limiter (Spitzen max. −1,5 dB)',
- async run(seg,p,c,onp,t){const E=ENH[p.str]||ENH.mittel;removeDC(seg);filt(seg,'hp',80,0,true);
-   if(p.nr){const pow=S.noise?S.noise.pow:autoProfileFor(t);for(let i=0;i<seg.length;i++)seg[i]=await nrRun(seg[i],pow,{red:E.red,sens:6,smooth:3},f=>onp((i+f)/seg.length*.7))}
+  {k:'nr',l:'Rauschen entfernen',type:'chk',def:true},{k:'lev',l:'Lautstärke-Schwankungen ausgleichen (Leveler)',type:'chk',def:true},
+  {k:'quiet',l:'Leise Aufnahme verstärken',type:'chk',def:false},{k:'declip',l:'Übersteuerung reparieren',type:'chk',def:false},{k:'dehum',l:'Brummen entfernen',type:'chk',def:false},
+  {k:'mouth',l:'Popp- & Schmatzgeräusche entfernen',type:'chk',def:false},{k:'deess',l:'Zischlaute dämpfen',type:'chk',def:false},
+  {k:'eq',l:'Klang: Mulm weg, Präsenz & Luft',type:'chk',def:false},{k:'comp',l:'Dynamik glätten (Kompressor)',type:'chk',def:false}],
+ handle:.5,info(ts){const P=FXP.enh,st=[P.declip&&'Übersteuerung',P.dehum&&'Brummen',P.mouth&&'Popp/Schmatz',P.nr&&'Rauschen'+(P.quiet?' (stark)':''),P.deess&&'Zischlaute',P.eq&&'EQ',P.lev&&'Leveler',P.comp&&'Kompressor',P.quiet&&'Pausen absenken','Lautheit'].filter(Boolean);
+   return scopeTxt(ts)+'<br>Kette: '+st.join(' → ')+' (Spitzen max. −1,5 dB)'},
+ async run(seg,p,c,onp,t){const E=ENH[p.str]||ENH.mittel,notes=[];removeDC(seg);
+   if(p.declip){const r=declip(seg,.99);if(r.runs)notes.push(r.runs+' übersteuerte Stellen repariert')}
+   filt(seg,'hp',80,0,true);
+   if(p.dehum){const r=await humDetect(seg[0]);if(r.db>10){dehumApply(seg,r.f0,8,18);notes.push('Brummen '+nf(r.f0,1)+' Hz entfernt')}}
+   if(p.mouth){await blockwise(seg,part=>depopPart(part,50));await blockwise(seg,(part,k0,k1)=>declickPart(part,50,k0,k1))}onp(.08);
+   if(p.nr){const pow=S.noise?S.noise.pow:autoProfileFor(t);for(let i=0;i<seg.length;i++)seg[i]=await nrRun(seg[i],pow,{red:E.red+(p.quiet?6:0),sens:6,smooth:3},f=>onp(.08+(i+f)/seg.length*.62))}
+   onp(.7);await yieldUI();if(p.deess)await blockwise(seg,part=>deessPart(part,{freq:5000,red:7,sens:50}));
    onp(.72);await yieldUI();if(p.eq){for(const a of seg){runBiq(a,biq('pk',300,E.mud,1));runBiq(a,biq('pk',3500,E.pres,.9));runBiq(a,biq('hs',10000,E.air))}}
-   onp(.78);await yieldUI();if(p.lev)leveler(seg,p.lufs,12,10,4);
+   onp(.78);await yieldUI();if(p.lev)leveler(seg,p.lufs,p.quiet?18:12,10,4);
    onp(.85);await yieldUI();if(p.comp){const L=lufs(seg);const off=isFinite(L)?L+16:0;compress(seg,{thr:E.thr+off,ratio:E.ratio,att:8,rel:150,knee:10})}
-   onp(.93);await yieldUI();normLufs(seg,p.lufs,true,c);return seg}},
+   if(p.quiet){/* verstärktes Rauschen in den Pausen absenken (−15 dB, weich) */const L=await frameLevels(seg,0,seg[0].length),st=levelStats(L);if(st.ok){const want=new Uint8Array(L.length);for(let f=0;f<L.length;f++)want[f]=L[f]>st.thr?2:L[f]>st.thr-4?1:0;applyGate(seg,holdOpen(want,250),{red:15,rel:150})}}
+   onp(.93);await yieldUI();normLufs(seg,p.lufs,true,c);if(notes.length)c.note=notes.join(' · ')+(c.note?' · '+c.note:'');return seg}},
 {id:'nr',name:'Rauschreduzierung',icon:'nr',
  desc:'Ohne Profil sucht der Editor automatisch die leisesten Stellen der Spur. Genauer: Stelle mit reinem Rauschen markieren → „Profil aus Auswahl“, dann Bereich wählen (nichts gewählt = ganze Spur) → Anwenden.',
  params:[{k:'red',l:'Reduktion',min:3,max:40,step:1,def:12,u:'dB'},{k:'sens',l:'Empfindlichkeit',min:0,max:20,step:.5,def:6,u:'dB'},{k:'smooth',l:'Glättung',min:0,max:12,step:1,def:3,u:'Bänder'},{k:'res',l:'Nur entferntes Rauschen ausgeben (Kontrolle)',type:'chk',def:false}],
  extra(pn){const r=el('div','chipsrow');r.style.margin='8px 0 0';const a=el('button','','Profil aus Auswahl');a.onclick=captureNoise;const b=el('button','','Automatisch');b.title='Profil verwerfen und automatisch die leisesten Stellen nutzen';b.onclick=()=>{S.noise=null;updFxInfo();toast('Rauschprofil: automatisch')};r.append(a,b);pn.append(r)},
  info:ts=>(S.noise?`Rauschprofil: <b>aus Auswahl</b> (${nf(S.noise.dur,1)} s)`:'Rauschprofil: <b>automatisch</b> (leiseste Stellen)')+'<br>'+scopeTxt(ts),
  handle:.2,async run(seg,p,c,onp,t){const pow=S.noise?S.noise.pow:autoProfileFor(t),out=[];for(let i=0;i<seg.length;i++)out.push(await nrRun(seg[i],pow,p,f=>onp((i+f)/seg.length)));return out}},
+{id:'declip',name:'Übersteuerung reparieren',icon:'declip',
+ desc:'Wurde zu laut aufgenommen, sind die Spitzen der Welle abgeschnitten – das klingt kratzig. Der Filter rechnet die fehlenden Spitzen aus dem Verlauf davor und danach nach. Gut bei leichter bis mittlerer Übersteuerung.',
+ params:[{k:'thr',l:'Empfindlichkeit',min:95,max:99.9,step:.1,def:99,fmt:v=>nf(v,1)+' %'},{k:'lim',l:'Danach Spitzen sanft begrenzen (−1 dB)',type:'chk',def:true}],
+ handle:.01,info(ts){const t=ts[0],[i0,i1]=trackRange(t),P=FXP.declip,r=memoAsync(t,'clip'+P.thr,i0,i1,()=>clipStats(t,i0,i1,P.thr/100));
+   const St=k=>k+(k===1?' Stelle':' Stellen');
+   return (r?(!r.runs?'Keine Übersteuerung gefunden':r.pct<.005?`Praktisch keine Übersteuerung <span class="hint">(${St(r.runs)})</span>`:`<b>${nf(r.pct,r.pct<.1?3:2)} %</b> übersteuert · ${St(r.runs)}`+(r.pct>2?'<br><span class="warn">Sehr stark übersteuert – wird hörbar besser, aber nicht perfekt.</span>':'')):'<span class="hint">Spitzen werden gesucht …</span>')+'<br>'+scopeTxt(ts)},
+ run(seg,p,c){const r=declip(seg,p.thr/100);if(p.lim)limit(seg,-1);c.note=r.runs?`${r.runs} Stellen repariert (${nf(r.pct,2)} % übersteuert)`:'keine Übersteuerung gefunden';return seg}},
+{id:'dehum',name:'Brummen entfernen',icon:'dehum',
+ desc:'Entfernt Netzbrummen (50 Hz in Europa) und seine Obertöne mit sehr schmalen Filtern – die Stimme bleibt unangetastet.',
+ params:[{k:'base',l:'Netzfrequenz',type:'sel',opts:[['auto','Automatisch erkennen'],['50','50 Hz (Europa)'],['60','60 Hz (USA)']],def:'auto'},{k:'harm',l:'Obertöne',min:1,max:20,step:1,def:8,u:''},
+  {k:'width',l:'Breite',type:'sel',opts:[['30','Schmal (sanft)'],['18','Mittel'],['9','Breit (gründlich)']],def:'18'}],
+ handle:.4,info(ts){const t=ts[0],[i0,i1]=trackRange(t),r=memoAsync(t,'hum',i0,i1,async()=>humDetect(t.ch[0].slice(i0+Math.max(0,((i1-i0)>>1)-SR*10),i0+Math.min(i1-i0,((i1-i0)>>1)+SR*10))));
+   return (r?(r.db>10?`Brummen erkannt: <b>${nf(r.f0,2)} Hz</b> (+${Math.round(r.db)} dB über der Umgebung)`:`Kaum Brummen gefunden <span class="hint">(${nf(r.f0,2)} Hz, +${Math.max(0,Math.round(r.db))} dB)</span>`):'<span class="hint">Brummen wird gesucht …</span>')+'<br>'+scopeTxt(ts)},
+ async run(seg,p,c){const r=await humDetect(seg[0]),weak=r.db<10;let f0=p.base==='auto'?(weak?50:r.f0):+p.base;if(p.base!=='auto'&&!weak&&Math.abs(r.f0-f0)<.6)f0=r.f0;/* genau eingemessen, wenn wirklich Brummen da ist */
+   const k=dehumApply(seg,f0,p.harm,+p.width);c.note=(weak?'kaum Brummen erkannt – ':'')+`${nf(f0,2)} Hz + ${k-1} Obertöne gefiltert`;return seg}},
+{id:'mouth',name:'Popp- & Schmatzgeräusche',icon:'mouth',
+ desc:'Entschärft Plopp-Laute bei „p“ und „b“ (tiefe Luftstöße ins Mikrofon) und entfernt kurze Schmatz- und Klickgeräusche des Mundes. Nur an diesen Stellen wird eingegriffen.',
+ params:[{k:'pop',l:'Plopp-Laute (p, b) entschärfen',type:'chk',def:true},{k:'click',l:'Schmatz- und Klickgeräusche entfernen',type:'chk',def:true},{k:'sens',l:'Empfindlichkeit',min:0,max:100,step:5,def:50,u:'%'}],
+ handle:.3,info:scopeTxt,
+ async run(seg,p,c,onp){let pops=0,clicks=0;if(p.pop)pops=await blockwise(seg,part=>depopPart(part,p.sens),f=>onp(f*(p.click?.5:1)));
+   if(p.click)clicks=await blockwise(seg,(part,k0,k1)=>declickPart(part,p.sens,k0,k1),f=>onp(p.pop?.5+f*.5:f));c.note=[p.pop?pops+' Plopp-Laute':'',p.click?clicks+' Klicks':''].filter(Boolean).join(' · ');return seg}},
+{id:'deess',name:'Zischlaute dämpfen',icon:'deess',
+ desc:'Macht scharfe „s“-, „z“- und „sch“-Laute leiser – nur in dem Moment, in dem sie auftreten. Der restliche Klang bleibt gleich.',
+ params:[{k:'red',l:'Stärke',min:2,max:15,step:1,def:7,fmt:v=>'bis −'+v+' dB'},{k:'sens',l:'Empfindlichkeit',min:0,max:100,step:5,def:50,u:'%'},{k:'freq',l:'Ab Frequenz',min:3000,max:9000,log:true,def:5000,u:'Hz'}],
+ handle:.2,info:scopeTxt,
+ async run(seg,p,c,onp){const n=await blockwise(seg,part=>deessPart(part,p),onp);c.note=`${nf(n/SR,1)} s Zischlaute gedämpft`;return seg}},
+{id:'match',name:'Klang angleichen',icon:'match',
+ desc:'Gleicht die Klangfarbe der ausgewählten Spur an eine Vorbild-Spur an – z. B. den Gast an deine Stimme. Dafür werden nur Stellen mit Sprache verglichen.',
+ params:[{k:'amt',l:'Stärke',min:20,max:100,step:5,def:70,u:'%'},{k:'max',l:'Höchstens',min:2,max:12,step:1,def:6,fmt:v=>'±'+v+' dB'}],
+ extra(pn,fx){const w=el('div','fsel');w.dataset.tip=tipHtml('match.ref');w.append(el('label','','Vorbild-Spur'));const sel=el('select');sel.id='matchRef';sel.onchange=()=>{FXP.match.ref=+sel.value;lsSet('fxp',FXP);updFxInfo()};w.append(sel);pn.insertBefore(w,pn.querySelector('.sl,.fchk,.fsel'))},
+ handle:.1,
+ info(ts){const sel=$('#matchRef'),P=FXP.match,t=ts[0],others=S.tracks.filter(x=>x!==t&&tLen(x));
+   if(sel){const v=String(P.ref||'');sel.innerHTML='';for(const x of others)sel.append(new Option(x.name,x.id));if(others.some(x=>String(x.id)===v))sel.value=v;else if(others.length){sel.value=String(others[0].id);P.ref=others[0].id}}
+   if(!others.length)return '<span class="warn">Braucht mindestens zwei Spuren – eine davon als Vorbild.</span>';const ref=byId(P.ref);if(!ref)return scopeTxt(ts);
+   const r=memoAsync(t,'match'+ref.id+'@'+seqId(ref.ch[0])+'/'+P.amt+'/'+P.max,0,tLen(t),async()=>{const[A,B]=await Promise.all([ltas(ref),ltas(t)]);return A&&B?matchGains(A,B,P):null});
+   if(!r)return '<span class="hint">Klang wird verglichen … (bei sehr wenig Sprache klappt es nicht)</span><br>'+scopeTxt(ts);
+   const mx=r.reduce((a,v)=>Math.max(a,Math.abs(v)),0),lo=(r.slice(0,6).reduce((a,v)=>a+v,0)/6),hi=(r.slice(18).reduce((a,v)=>a+v,0)/6);
+   return `Vorbild: <b>${esc(ref.name)}</b> · Änderung bis <b>±${nf(mx,1)} dB</b><br><span class="hint">Bässe ${fmtDb(lo)} dB · Höhen ${fmtDb(hi)} dB</span><br>${scopeTxt(ts)}`},
+ async run(seg,p,c,onp,t){const ref=byId(p.ref);if(!ref||ref===t)throw new Error('Erst eine andere Spur als Vorbild wählen');const[A,B]=await Promise.all([ltas(ref),ltas(t)]);if(!A||!B)throw new Error('Zu wenig Sprache zum Vergleichen');
+   const g=matchGains(A,B,p),h=firFromBands(g);for(let i=0;i<seg.length;i++)await firApply(seg[i],h,f=>onp((i+f)/seg.length));c.note='an „'+ref.name+'“ angeglichen';return seg}},
 {id:'gate',name:'Pausen absenken',icon:'gate',
  desc:'Schaltet leise Stellen zwischen dem Sprechen stumm – Atmen, Rauschen, leise Geräusche. Während gesprochen wird, bleibt der Ton unverändert.',
  params:[{k:'auto',l:'Schwelle automatisch',type:'chk',def:true},{k:'thr',l:'Schwelle',min:-80,max:-20,step:1,def:-50,u:'dB',show:p=>!p.auto},
@@ -1270,7 +1400,31 @@ const TIPS={
  'enh.nr':['Entfernt gleichmäßige Hintergrundgeräusche wie Rauschen, Lüfter oder Brummen.','An lassen – außer die Aufnahme ist schon sehr sauber.'],
  'enh.eq':['Klangfarbe: nimmt dumpfe, „mulmige“ Anteile heraus und macht die Stimme etwas klarer und frischer.','Aus – einschalten, wenn die Stimme dumpf oder topfig klingt.'],
  'enh.lev':['Gleicht aus, wenn jemand mal lauter und mal leiser spricht oder sich vom Mikrofon wegdreht.','An – besonders bei langen Aufnahmen.'],
+ 'enh.quiet':['Für Aufnahmen, die viel zu leise sind: Beim Lauterziehen würde das Rauschen mitwachsen. Deshalb wird stärker entrauscht, leise Stellen werden kräftiger angehoben, und die Pausen werden danach etwas abgesenkt.','Nur einschalten, wenn die Spur deutlich zu leise ist (Lautheit links weit unter −24 LUFS).'],
+ 'enh.declip':['Repariert abgeschnittene Spitzen, wenn die Aufnahme übersteuert war (kratziger, verzerrter Klang). Wird als Erstes angewendet.','Nur bei übersteuerten Aufnahmen. Mehr Einstellungen: Effekt „Übersteuerung reparieren“.'],
+ 'enh.dehum':['Erkennt Netzbrummen (50 oder 60 Hz) automatisch und filtert es samt Obertönen heraus. Ist kein Brummen da, passiert nichts.','Einschalten, wenn ein tiefes Summen zu hören ist.'],
+ 'enh.mouth':['Entschärft Plopp-Laute bei „p“ und „b“ und entfernt kurze Schmatz- und Klickgeräusche.','Bei nah besprochenen Mikrofonen sinnvoll.'],
+ 'enh.deess':['Macht scharfe „s“- und „sch“-Laute etwas leiser.','Einschalten, wenn Zischlaute unangenehm hervorstechen.'],
  'enh.comp':['Macht die Stimme gleichmäßiger, indem laute Spitzen etwas gebremst werden. Klingt dadurch „radiomäßiger“.','Aus – der Leveler reicht meist. Einschalten, wenn einzelne Wörter oder Lacher herausstechen.'],
+ declip:['Bei zu lauter Aufnahme schneidet das Gerät die Spitzen der Schallwelle einfach ab – das klingt kratzig und verzerrt. Der Filter erkennt diese abgeschnittenen Stellen und rechnet aus, wie die Welle weitergelaufen wäre. Leichte Übersteuerung verschwindet fast ganz, starke wird deutlich besser.','Die Anzeige unten sagt, wie viel übersteuert ist. Unter 0,01 % lohnt es sich nicht.'],
+ 'declip.thr':['Ab welcher Höhe (im Verhältnis zur lautesten Stelle) eine Spitze als abgeschnitten gilt. Niedriger = findet mehr, auch Stellen, die kurz vor dem Abschneiden lagen.','99 % (98–99,5 %).'],
+ 'declip.lim':['Die wiederhergestellten Spitzen sind höher als vorher. Damit sie nicht wieder übersteuern, werden sie sanft auf −1 dB begrenzt – die Lautstärke bleibt sonst gleich.','An.'],
+ dehum:['Entfernt das tiefe Netzbrummen (Summen), das z. B. durch Kabel oder Geräte am Stromnetz entsteht – in Europa 50 Hz, in den USA 60 Hz – samt seinen Obertönen. Die Filter sind so schmal, dass die Stimme nicht leidet.','Automatisch erkennen lassen und mit Standardwerten anwenden.'],
+ 'dehum.base':['Grundton des Brummens. Automatisch misst den genauen Wert (z. B. 49,98 Hz) und wählt zwischen 50 und 60 Hz.','Automatisch.'],
+ 'dehum.harm':['Wie viele Obertöne (100, 150, 200 Hz …) mitgefiltert werden. Brummen hat meist viele davon.','8 (4–12).'],
+ 'dehum.width':['Wie breit jeder Filter ist. Schmal klingt am natürlichsten, Breit erwischt auch schwankendes Brummen.','Mittel.'],
+ mouth:['Zwei typische Störungen bei nah besprochenen Mikrofonen: Plopp-Laute (bei „p“ und „b“ trifft ein Luftstoß das Mikrofon – ein dumpfes Wummern) und Schmatz-/Klickgeräusche (feuchte Mundgeräusche). Der Filter greift nur genau an diesen Stellen ein.','Mit Standardwerten anwenden, Ergebnis mit „Vorschau“ prüfen.'],
+ 'mouth.pop':['Nimmt bei Plopp-Lauten kurz die tiefsten Töne (unter 100 Hz) weg – nur dort, wo ein Luftstoß erkannt wird.','An.'],
+ 'mouth.click':['Findet sehr kurze Knackser (kürzer als 1,5 Millisekunden) und blendet an genau dieser Stelle die Höhen weich aus.','An.'],
+ 'mouth.sens':['Wie leicht etwas als Plopp oder Klick gilt. Höher = findet mehr, kann aber auch harte Konsonanten wie „t“ oder „k“ erwischen.','50 % (30–70 %).'],
+ deess:['Scharfe Zischlaute („s“, „z“, „sch“) können unangenehm stechen – besonders bei hellen Mikrofonen oder nach „Klang“-Anhebung. Der Filter macht nur diese Laute kurz leiser, alles andere bleibt gleich.','Mit Standardwerten anwenden. Zu stark eingestellt klingt es nach Lispeln.'],
+ 'deess.red':['Wie stark Zischlaute höchstens abgesenkt werden.','5–8 dB.'],
+ 'deess.sens':['Wie leicht ein Laut als Zischlaut gilt. Höher = greift öfter.','50 %.'],
+ 'deess.freq':['Ab welcher Tonhöhe gefiltert wird. Bei Frauenstimmen liegen Zischlaute oft höher.','5000 Hz (Männer 4000–5000, Frauen 5500–7000).'],
+ match:['Jedes Mikrofon und jeder Raum färbt die Stimme anders. Dieser Filter misst die Klangfarbe der Sprache in beiden Spuren und passt die ausgewählte Spur behutsam an die Vorbild-Spur an. Danach klingen beide eher, als säßen sie im selben Raum.','Die besser klingende Spur als Vorbild wählen, die andere auswählen und anwenden.'],
+ 'match.ref':['Die Spur, deren Klang als Vorbild dient – meist die mit dem besseren Mikrofon. Die ausgewählte Spur wird an sie angeglichen.','Die besser klingende Spur.'],
+ 'match.amt':['Wie weit angeglichen wird. 100 % = so nah wie möglich, weniger = nur ein Stück in die Richtung.','70 %.'],
+ 'match.max':['Wie stark ein einzelner Frequenzbereich höchstens angehoben oder abgesenkt wird. Schützt vor zu starken Eingriffen.','±6 dB.'],
  nr:['Entfernt gleichmäßige Geräusche im Hintergrund – Rauschen, Lüfter, Klimaanlage, Brummen. Gegen einzelne Geräusche wie Husten oder Klicks hilft es nicht.','Zuerst eine Stelle mit reinem Rauschen (ohne Sprache) markieren und „Profil aus Auswahl“ klicken, dann anwenden.'],
  'nr.red':['Wie stark das Rauschen leiser gemacht wird. Zu viel lässt die Stimme blechern oder wie „unter Wasser“ klingen.','6–15 dB, Standard 12 dB.'],
  'nr.sens':['Wie schnell etwas als Rauschen gilt. Höher entfernt mehr, kann aber auch leise Teile der Stimme angreifen.','4–8 dB, Standard 6 dB.'],

@@ -173,7 +173,10 @@ body.sideoff #side{display:none}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
 .sec h4 .grip{display:flex;opacity:0;margin-left:6px;color:#6b6b73;cursor:grab;transition:opacity .12s}.sec h4 .r+.grip{margin-left:6px}.sec h4:not(:has(.r)) .grip{margin-left:auto}.sec h4:hover .grip{opacity:.8}.sec h4 .grip .ic{width:13px;height:13px}
-.sec.sdrag{opacity:.45}.sdrop{height:2px;background:#5b8def;border-radius:2px;margin:2px 8px;box-shadow:0 0 0 3px #5b8def22}body.secdragging,body.secdragging *{cursor:grabbing!important;user-select:none}
+#side.sorting .sec>:not(h4){display:none!important}#side.sorting .sec{padding-bottom:4px}
+.sec.sdrag{position:relative;z-index:30;background:#1d1d21;border-radius:12px;box-shadow:0 10px 28px #000a,0 0 0 1px #5b8def66;transition:none!important}body.secdragging,body.secdragging *{cursor:grabbing!important;user-select:none}
+#secBk .bkst{display:none;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:500}#secBk.col .bkst{display:inline-flex}
+#secBk .bkst i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}#secBk .bkst.ok{color:#4ade80}#secBk .bkst.warn{color:#f5b942}#secBk .bkst.bad{color:#ff7b7b}#secBk .bkst.off{color:#6b6b73}
 #editChips .eg{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#56565e;margin:8px 0 4px 2px}#editChips .eg:first-child{margin-top:0}
 #editChips .er{gap:4px}#editChips .er button{display:inline-flex;align-items:center;gap:6px}#editChips .er button .ic{width:14px;height:14px;flex:none;opacity:.85}
 #hidList{max-height:42vh;overflow:auto;margin:0 -4px;padding:0 4px;scrollbar-width:thin}
@@ -304,7 +307,6 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
     <canvas id="meter" title="Pegel L/R (bei Aufnahme: Eingang) – rot = Übersteuerung"></canvas>
     <span class="sp"></span>
     <button id="bEnv" class="ib" data-i="envi" title="Hüllkurve (H): Punkte setzen und ziehen · im markierten Bereich ziehen = Passage lauter/leiser">Hüllkurve</button>
-    <button id="bEnvReset" class="ib" data-i="undo" title="Hüllkurve zurücksetzen (Shift+H) · mit Markierung nur dort, sonst alle Spuren" style="display:none">Zurücksetzen</button>
     <button id="bSync" class="ib" data-i="link" title="Spuren synchron halten (Y): Löschen, Einfügen und Stille kürzen wirken auf alle Spuren">Sync</button>
     <span class="vs"></span>
     <button id="bUndo" class="ib" data-i="undo" title="Rückgängig (Strg+Z)"></button>
@@ -380,7 +382,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
         <label class="fchk"><input type="checkbox" id="recAgc"> Automatische Pegelanpassung</label>
         <div class="hint" id="outHint"></div>
       </div>
-      <div class="sec" id="secBk"><h4>Sicherung</h4>
+      <div class="sec" id="secBk"><h4>Sicherung<span class="r bkst"></span></h4>
         <label class="fchk"><input type="checkbox" id="bkOn"> Projekt automatisch sichern</label>
         <div class="fsel"><label>Intervall</label><select id="bkMin"><option value="2">alle 2 Minuten</option><option value="5">alle 5 Minuten</option><option value="10">alle 10 Minuten</option><option value="15">alle 15 Minuten</option><option value="30">alle 30 Minuten</option></select></div>
         <div class="fsel"><label>Behalten</label><select id="bkKeep"><option value="5">die letzten 5</option><option value="10">die letzten 10</option><option value="20">die letzten 20</option><option value="0">alle</option></select></div>
@@ -2352,7 +2354,10 @@ function updBkIcon(){const a=$('#bAuto');if(!a)return;const tm=bkLast?new Date(b
 async function toggleAutoBk(){if(!window.showDirectoryPicker)return toast('Automatische Sicherung braucht Chrome oder Edge');
   if(!bkDir)return bkPick();if(bkNeed){if(await bkPerm(true)){bkNeed=false;BK.on=true;saveBk();bkSchedule();updBk();runBackup(false);toast('Sicherung läuft wieder')}return}
   BK.on=!BK.on;$('#bkOn').checked=BK.on;saveBk();bkSchedule();updBk();toast(BK.on?`Automatische Sicherung an – alle ${BK.min} Min. nach „${bkDir.name}“`:'Automatische Sicherung aus');if(BK.on){S.dirtyBk=true;runBackup(false)}}
-function updBk(){updBkIcon();const b=$('#bkDirB');if(!b)return;b.textContent=bkNeed?'Zugriff erlauben':bkDir?'📁 '+bkDir.name:'Ordner wählen …';b.classList.toggle('on',bkNeed);
+/* Zustand der Sicherung in der Überschrift (sichtbar, wenn der Abschnitt eingeklappt ist) */
+function updBkSt(){const e=$('#secBk .bkst');if(!e)return;const no=!window.showDirectoryPicker,[c,t]=no?['off','in diesem Browser nicht verfügbar']:!BK.on?['bad','aus']:!bkDir?['bad','kein Ordner gewählt']:bkNeed?['warn','Zugriff erlauben']:['ok',`aktiv · alle ${BK.min} min`];
+  e.className='r bkst '+c;e.innerHTML=`<i></i>${t}`}
+function updBk(){updBkIcon();updBkSt();const b=$('#bkDirB');if(!b)return;b.textContent=bkNeed?'Zugriff erlauben':bkDir?'📁 '+bkDir.name:'Ordner wählen …';b.classList.toggle('on',bkNeed);
   const tm=bkLast?new Date(bkLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
   const pb=projBytes(),est=pb?`<br>Je Sicherung ca. <b>${fmtMB(pb)}</b> · belegt höchstens ca. <b>${BK.keep?fmtMB(pb*BK.keep):'unbegrenzt'}</b>${!BK.keep?' <span class="warn">(„alle behalten“ kann die Festplatte füllen)</span>':''}`:'';
   $('#bkInfo').innerHTML=(!bkDir?'Wähle einen Ordner – dort landen die Sicherungen als .aeproj-Dateien.':bkNeed?'<span style="color:#f5b942">Sicherung pausiert: Der Browser braucht nach dem Neustart einmal deine Erlaubnis – „Zugriff erlauben“ klicken.</span>':
@@ -2468,8 +2473,7 @@ function updUI(){renderLog();renderHid();$('#bUndo').disabled=!S.undo.length;$('
   $('#selInfo').innerHTML=hs?`<span>Start</span><b>${fmtT(S.sel.a)}</b><span>Ende</span><b>${fmtT(S.sel.b)}</b><span>Länge</span><b>${fmtT(S.sel.b-S.sel.a)}</b><span>Spuren</span><b>${ns}</b>`:`<span>Cursor</span><b>${fmtT(S.sel.a)}</b><span>Spuren</span><b>${ns}</b><span>Projekt</span><b>${fmtT(projDur())}</b><span>Rate</span><b>${SR/1000} kHz</b>`;
   $('#selfoot').textContent=hs?`Auswahl ${fmtT(S.sel.a)} – ${fmtT(S.sel.b)} · ${nf(S.sel.b-S.sel.a,3)} s`:`Cursor ${fmtT(S.sel.a)}`;
   for(const b of $$('#editChips button'))if(b.dataset.need)b.disabled=b.dataset.need==='sel'?!hs:b.dataset.need==='clip'?!S.clip:false;
-  if(!P.on&&!R.on)updClock();updFxInfo();try{updBk()}catch{}
-  $('#bEnvReset').style.display=S.tracks.some(t=>t.env&&t.env.length)?'':'none'}
+  if(!P.on&&!R.on)updClock();updFxInfo();try{updBk()}catch{}}
 function showHelp(){const K=(...k)=>k.map(x=>`<kbd>${x}</kbd>`).join(' '),row=(a,...k)=>`<div><span>${a}</span><span>${K(...k)}</span></div>`;
   modal(`<h3>Tastenkürzel &amp; Maus</h3><div class="keys">
   <h5>Wiedergabe &amp; Aufnahme</h5>${row('Abspielen / Stopp','Leertaste')}${row('Auswahl in Schleife','Shift+Leertaste')}${row('Pause / Fortsetzen','P')}${row('Aufnahme starten / beenden','R')}${row('Schleife an/aus','L')}${row('Zum Anfang / Ende','Pos1','Ende')}${row('Cursor ±1 s (Strg: ±10 s)','←','→')}${row('Auswahl erweitern','Shift+←','Shift+→')}${row('Spur wechseln (Shift: mehrere)','↑','↓')}${row('Stopp / Auswahl aufheben','Esc')}
@@ -2620,7 +2624,7 @@ $$('[data-i]').forEach(e=>e.insertAdjacentHTML('afterbegin',I[e.dataset.i]));
 $('#bImport').onclick=$('#wImport').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{importFiles(e.target.files);e.target.value=''};
 $('#bNew').onclick=newProject;$('#bPlay').onclick=togglePlay;$('#bPause').onclick=togglePause;$('#bStop').onclick=()=>{if(R.starting)R.cancel=true;else if(R.on)stopRec();else stopAll()};
-$('#bEnvReset').onclick=()=>envReset(true);$('#bAuto').onclick=toggleAutoBk;$('#bOpen').onclick=openProjectPicker;$('#bSave').onclick=()=>saveProject(false);$('#pname').onclick=()=>saveProject(true);$('#bEnv').onclick=toggleEnv;
+$('#bAuto').onclick=toggleAutoBk;$('#bOpen').onclick=openProjectPicker;$('#bSave').onclick=()=>saveProject(false);$('#pname').onclick=()=>saveProject(true);$('#bEnv').onclick=toggleEnv;
 $('#bRec').onclick=$('#wRec').onclick=toggleRec;$('#wEmpty').onclick=()=>{addTrack();toast('Leeres Projekt – jetzt aufnehmen (R), Dateien hineinziehen, einfügen (Strg+V) oder Kapitel/Untertitel anlegen',5000)};$('#bStart').onclick=()=>moveCur(0);$('#bEnd').onclick=()=>moveCur(projDur());
 $('#bLoop').onclick=()=>{S.loop=!S.loop;updTransport()};$('#bSync').onclick=toggleSync;$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;
 $('#bZIn').onclick=()=>zoomAt(1.6);$('#bZOut').onclick=()=>zoomAt(1/1.6);$('#bFit').onclick=fit;$('#bZSel').onclick=zoomSel;$('#bHelp').onclick=showHelp;$('#bExport').onclick=openExport;$('#bAddTrack').onclick=addTrack;
@@ -2662,16 +2666,31 @@ $('#bSide').onclick=()=>toggleSide();if(lsGet('sideoff',false))toggleSide(false)
   const tail=secs().at(-1).nextSibling,D=secs().map(x=>x.dataset.k),ord=lsGet('secorder',null);
   if(Array.isArray(ord)){const R=ord.filter(k=>D.includes(k));D.forEach((k,i)=>{if(!R.includes(k)){const pv=D.slice(0,i).reverse().find(x=>R.includes(x));R.splice(pv?R.indexOf(pv)+1:0,0,k)}});
     const m=new Map(secs().map(x=>[x.dataset.k,x]));for(const k of R)side.insertBefore(m.get(k),tail)}
+  /* Ziehen: alle Abschnitte zeigen kurz nur ihre Überschrift, der gegriffene klebt am Mauszeiger, die anderen rutschen animiert.
+     Bewegung/Loslassen werden am ganzen Fenster abgehört – so bleibt nie etwas hängen. */
   for(const sec of secs()){const h=$('h4',sec);
-    h.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('kbd,button,input,select'))return;const sy=e.clientY;let drag=false,ph=null,scr=null;
-      const mv=ev=>{if(!drag){if(Math.abs(ev.clientY-sy)<6)return;drag=true;try{h.setPointerCapture(ev.pointerId)}catch{}sec.classList.add('sdrag');document.body.classList.add('secdragging');ph=el('div','sdrop');sec.after(ph)}
-        const others=secs().filter(x=>x!==sec&&x.offsetParent);let before=null;for(const x of others){const r=x.getBoundingClientRect();if(ev.clientY<r.top+Math.min(r.height/2,40)){before=x;break}}
-        if(before)side.insertBefore(ph,before);else side.insertBefore(ph,tail);
-        const sr=side.getBoundingClientRect(),edge=40;clearInterval(scr);if(ev.clientY<sr.top+edge)scr=setInterval(()=>side.scrollTop-=12,16);else if(ev.clientY>sr.bottom-edge)scr=setInterval(()=>side.scrollTop+=12,16)};
-      const up=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);clearInterval(scr);if(!drag)return;
-        side.insertBefore(sec,ph);ph.remove();sec.classList.remove('sdrag');document.body.classList.remove('secdragging');h.dataset.dragged='1';setTimeout(()=>delete h.dataset.dragged,50);
-        lsSet('secorder',secs().map(x=>x.dataset.k));toast('Reihenfolge der Seitenleiste gespeichert',1800)};
-      h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up)})}})();
+    h.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('kbd,button,input,select'))return;const sy=e.clientY,pid=e.pointerId;
+      let drag=false,grab=0,ty=0,cy=sy,raf=0,scr=0,last=0;
+      const vis=()=>secs().filter(x=>x!==sec&&x.offsetParent);
+      const place=()=>{raf=0;const base=sec.getBoundingClientRect().top-ty;ty=cy-grab-base;sec.style.transform=`translateY(${ty}px)`;
+        const hh=h.getBoundingClientRect().height,mid=cy-grab+hh/2;let before=null;for(const x of vis()){const r=x.getBoundingClientRect();if(mid<r.top+r.height/2){before=x;break}}
+        const cur=(()=>{let n=sec.nextElementSibling;while(n&&!(n.classList.contains('sec')&&n.offsetParent))n=n.nextElementSibling;return n})();
+        if(before!==cur&&!(before==null&&cur==null)){const os=vis(),r0=new Map(os.map(x=>[x,x.getBoundingClientRect().top]));
+          side.insertBefore(sec,before||tail);
+          for(const x of os){const d=r0.get(x)-x.getBoundingClientRect().top;if(Math.abs(d)>.5){x.style.transition='none';x.style.transform=`translateY(${d}px)`;requestAnimationFrame(()=>{x.style.transition='transform .14s ease';x.style.transform=''})}}
+          const b2=sec.getBoundingClientRect().top-ty;ty=cy-grab-b2;sec.style.transform=`translateY(${ty}px)`}};
+      const auto=()=>{const sr=side.getBoundingClientRect(),edge=48;let v=0;if(cy<sr.top+edge)v=-Math.ceil((sr.top+edge-cy)/4);else if(cy>sr.bottom-edge)v=Math.ceil((cy-sr.bottom+edge)/4);
+        if(v){side.scrollTop+=v;if(!raf)raf=requestAnimationFrame(place)}scr=requestAnimationFrame(auto)};
+      const begin=()=>{drag=true;const hr=h.getBoundingClientRect();const off=cy-hr.top;side.classList.add('sorting');sec.classList.add('sdrag');document.body.classList.add('secdragging');
+        /* nach dem Zusammenklappen: Überschrift wieder unter den Mauszeiger holen */
+        const nr=h.getBoundingClientRect();grab=off;side.scrollTop+=nr.top-hr.top;ty=0;place();scr=requestAnimationFrame(auto)};
+      const mv=ev=>{if(ev.pointerId!==pid)return;cy=ev.clientY;if(!drag){if(Math.abs(cy-sy)<4)return;begin();return}ev.preventDefault();if(!raf)raf=requestAnimationFrame(place)};
+      const end=()=>{removeEventListener('pointermove',mv,true);removeEventListener('pointerup',end,true);removeEventListener('pointercancel',end,true);removeEventListener('blur',end);
+        cancelAnimationFrame(raf);cancelAnimationFrame(scr);if(!drag)return;
+        sec.style.transform='';sec.classList.remove('sdrag');side.classList.remove('sorting');document.body.classList.remove('secdragging');for(const x of secs()){x.style.transform='';x.style.transition=''}
+        for(const d of $$('.sdrop'))d.remove();h.dataset.dragged='1';setTimeout(()=>delete h.dataset.dragged,60);
+        lsSet('secorder',secs().map(x=>x.dataset.k));sec.scrollIntoView({block:'nearest'})};
+      addEventListener('pointermove',mv,true);addEventListener('pointerup',end,true);addEventListener('pointercancel',end,true);addEventListener('blur',end)})}})();
 $('#bkOn').onchange=e=>{BK.on=e.target.checked;saveBk();if(BK.on&&!bkDir)bkPick();bkSchedule();updBk()};
 $('#bkMin').onchange=e=>{BK.min=+e.target.value;saveBk();bkSchedule();updBk()};$('#bkKeep').onchange=e=>{BK.keep=+e.target.value;saveBk()};
 $('#bStoreClr').onclick=clearStore;updStore();

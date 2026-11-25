@@ -128,14 +128,21 @@ body.trkdrag,body.trkdrag *{cursor:grabbing!important;user-select:none}
 #hbar{position:relative;margin-left:var(--hw)}
 #hthumb{position:absolute;top:3px;bottom:3px;background:#26262a;border-radius:8px;min-width:24px;cursor:grab}
 #hthumb:hover{background:#34343a}
-#welcome{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--dim);z-index:4;background:var(--bg)}
+#welcome{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:var(--dim);z-index:4;background:var(--bg);overflow:auto;padding:32px 16px;justify-content:safe center}
+#welcome h1{margin:2px 0 0}#welcome .tag{font-size:14px;color:#9a9aa2;max-width:420px;margin-top:-4px}
+#welcome .row{margin-top:8px;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:min(600px,100%)}#welcome .row button{justify-content:center;white-space:nowrap}
+@media (max-width:620px){#welcome .row{grid-template-columns:1fr;width:min(280px,100%)}}
+#welcome .fmts{display:grid;grid-template-columns:repeat(3,auto);gap:4px 22px;margin-top:10px;font-size:12px;text-align:left}
+#welcome .fmts div{display:flex;flex-direction:column;gap:2px}#welcome .fmts b{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#5d5d65}#welcome .fmts span{color:#8b8b93;white-space:nowrap}
+#welcome .drophint{font-size:12px;color:#5d5d65;margin-top:-2px}
+@media (max-width:620px){#welcome .fmts{grid-template-columns:1fr;text-align:center}#welcome .fmts div{align-items:center}}
 #welcome .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 #welcome button{font-size:14px;padding:9px 20px;display:flex;align-items:center;gap:8px}
 #welcome .sec2{background:#1a1a1c}
 #welcome .sec2:hover{background:#242428}
 #welcome .dimtxt{color:#6a6a72}
-#recent{width:min(560px,92%);margin-top:10px;text-align:left}
-#recent .rh{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ds-text-faint);margin:0 0 6px 12px}
+#recent{width:min(520px,100%);margin-top:18px;text-align:left;background:#151517;border:1px solid #232327;border-radius:16px;padding:12px 8px 10px}
+#recent .rh{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ds-text-faint);margin:0 0 6px 12px}#recent .rl{max-height:min(36vh,360px)!important}
 #recent .rl{display:flex;flex-direction:column;gap:1px;max-height:min(44vh,400px);overflow:auto}
 #recent .ri{display:flex;align-items:center;gap:10px;padding:7px 6px 7px 12px;border-radius:var(--ds-r-item);cursor:pointer;color:var(--ds-text-soft)}
 #recent .ri:hover{background:var(--ds-hover)}
@@ -165,6 +172,10 @@ body.sideoff #side{display:none}
 #rzSteps{display:flex;flex-direction:column;gap:2px;max-height:46vh;overflow:auto;margin:8px 0}
 #rzSteps label{display:flex;gap:8px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}#rzSteps label:hover{background:#1f1f22}#rzSteps .z{margin-left:auto;font-size:11px;color:#74747c}
 .rzl{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}.rzl .it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:13px}.rzl .it:hover{background:#1f1f22}.rzl .it .m{color:#74747c;font-size:11.5px;margin-left:auto}.rzl .it .x{opacity:.5}.rzl .it .x:hover{opacity:1;color:#ff7b7b}
+.sec h4 .grip{display:flex;opacity:0;margin-left:6px;color:#6b6b73;cursor:grab;transition:opacity .12s}.sec h4 .r+.grip{margin-left:6px}.sec h4:not(:has(.r)) .grip{margin-left:auto}.sec h4:hover .grip{opacity:.8}.sec h4 .grip .ic{width:13px;height:13px}
+.sec.sdrag{opacity:.45}.sdrop{height:2px;background:#5b8def;border-radius:2px;margin:2px 8px;box-shadow:0 0 0 3px #5b8def22}body.secdragging,body.secdragging *{cursor:grabbing!important;user-select:none}
+#editChips .eg{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#56565e;margin:8px 0 4px 2px}#editChips .eg:first-child{margin-top:0}
+#editChips .er{gap:4px}#editChips .er button{display:inline-flex;align-items:center;gap:6px}#editChips .er button .ic{width:14px;height:14px;flex:none;opacity:.85}
 #hidList{max-height:42vh;overflow:auto;margin:0 -4px;padding:0 4px;scrollbar-width:thin}
 #secTr .trTop{display:flex;gap:4px;align-items:center;margin:0 0 6px}#trQ{flex:1;min-width:0;margin:0}
 #trF{flex:none;display:flex;align-items:center;gap:4px;height:32px;min-width:32px;padding:0 9px;border-radius:999px;color:#8b8b93;white-space:nowrap}
@@ -318,11 +329,18 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
         <div id="welcome">
           <svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"><path d="M12 28v8M21 20v24M30 12v40M39 22v20M48 27v10"/></svg>
           <h1>Podcast Editor</h1>
-          <div>Audiodateien (WAV, MP3, M4A, FLAC, OGG …), Audacity-Projekte (.aup3), Schnittprojekte (.aeproj) oder Untertitel (SRT/VTT) importieren, hierher ziehen oder direkt aufnehmen.</div>
+          <div class="tag">Schneiden, säubern und untertiteln – direkt im Browser.</div>
           <div class="row">
             <button id="wImport" class="primary" data-i="import">Dateien importieren</button>
             <button id="wRec" class="sec2" data-i="rec">Aufnahme starten</button>
+            <button id="wEmpty" class="sec2" data-i="plus" title="Ohne Import beginnen: eine leere Spur zum Aufnehmen, Einfügen oder Hineinziehen – Kapitel, Kommentare und Untertitel gehen auch ohne Audio">Leeres Projekt</button>
           </div>
+          <div class="fmts">
+            <div><b>Audio</b><span>WAV · MP3 · M4A · FLAC · OGG</span></div>
+            <div><b>Projekte</b><span>.aeproj · Audacity .aup3</span></div>
+            <div><b>Untertitel</b><span>SRT · VTT</span></div>
+          </div>
+          <div class="drophint">oder Dateien einfach hierher ziehen</div>
           <div id="recent" style="display:none"><div class="rh">Letzte Sitzungen</div><div class="rl"></div><div class="foot"></div></div>
         </div>
       </div>
@@ -336,7 +354,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
     </div>
     <div id="sideRz"></div><aside id="side">
       <div class="sec"><h4>Auswahl</h4><div class="selg" id="selInfo"></div></div>
-      <div class="sec"><h4>Bearbeiten</h4><div class="chipsrow" id="editChips"></div></div>
+      <div class="sec"><h4>Bearbeiten</h4><div id="editChips"></div></div>
       <div class="sec" id="secHid" style="display:none"><h4>Ausgeblendete Passagen <span class="r" id="hidCount"></span></h4><div id="hidList"></div></div>
       <div class="sec"><h4>Kapitel &amp; Text <span class="r" title="B Kapitel · K Kommentar · T Untertitel · C Einblendung"><kbd>B</kbd> <kbd>K</kbd> <kbd>T</kbd></span></h4>
         <div class="chipsrow" id="laneChips" style="margin-bottom:8px"></div>
@@ -450,6 +468,17 @@ const I={
  filt:SV('<path d="M4 2v12M8 2v12M12 2v12" stroke-opacity=".5"/><path d="M2.5 10h3M6.5 5h3M10.5 8.5h3"/>'),/* EQ-Schieber */
  gate:SV('<path d="M1.5 8h1.5l1-3.5 1.2 7 1.2-5 .9 1.5H9"/><path d="M10.5 3.5v9"/><path d="M12.5 8h2" stroke-opacity=".55"/>'),
  xgate:SV('<path d="M1.5 5h2.5l1-2.5 1.2 5 1.2-4 1 1.5h6"/><path d="M1.5 11.5h3M11.5 11.5h3"/><path d="M6 9.5v4M10 9.5v4"/>'),
+ grip:SV('<circle cx="6" cy="4" r=".9"/><circle cx="10" cy="4" r=".9"/><circle cx="6" cy="8" r=".9"/><circle cx="10" cy="8" r=".9"/><circle cx="6" cy="12" r=".9"/><circle cx="10" cy="12" r=".9"/>'),
+ cut:SV('<circle cx="4.5" cy="11.5" r="2"/><circle cx="11.5" cy="11.5" r="2"/><path d="M5.8 10 12.3 2.5M10.2 10 3.7 2.5"/>'),
+ copy:SV('<rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 5.5V3.9c0-.8-.6-1.4-1.4-1.4H3.9c-.8 0-1.4.6-1.4 1.4v5.2c0 .8.6 1.4 1.4 1.4h1.6"/>'),
+ paste:SV('<rect x="3" y="3" width="10" height="11" rx="1.6"/><path d="M6 3.2V2h4v1.2"/><path d="M5.8 8h4.4M5.8 10.6h3"/>'),
+ dup:SV('<rect x="2.5" y="3" width="11" height="4" rx="1.2"/><rect x="2.5" y="9" width="11" height="4" rx="1.2" stroke-dasharray="2 1.6"/>'),
+ crop:SV('<path d="M4.5 1.5v10h10"/><path d="M1.5 4.5h10v10"/>'),
+ split:SV('<path d="M8 4.5V14"/><path d="M5.6 2h4.8L8 4.6z"/><path d="M1.5 9h4M10.5 9h4"/>'),
+ unsplit:SV('<path d="M1.5 9h13"/><path d="M6.3 3.2l3.4 3.4M9.7 3.2 6.3 6.6"/>'),
+ selall:SV('<rect x="2.5" y="3.5" width="11" height="9" rx="1.6" stroke-dasharray="2.2 1.8"/>'),
+ mono:SV('<path d="M1.5 4.5h3.5L8 8h6.5M1.5 11.5h3.5L8 8"/>'),
+ envwrite:SV('<path d="M1.5 6.5C4 6.5 5 2.5 8 2.5s4 4 6.5 4"/><path d="M8 8v5.5M5.8 11.4 8 13.6l2.2-2.2"/>'),
  filter:SV('<path d="M2.5 3.5h11l-4.2 5v4.2l-2.6 1.3V8.5z"/>'),/* Trichter */
  pen:SV('<path d="M10.8 2.8l2.4 2.4-7.4 7.4-3 .6.6-3z"/><path d="M9.3 4.3l2.4 2.4"/>'),
  trash:SV('<path d="M2.5 4.5h11M6.3 4.5V3h3.4v1.5"/><path d="M4 4.5l.7 8.5h6.6l.7-8.5"/><path d="M6.8 7v3.8M9.2 7v3.8"/>'),/* Mülleimer */
@@ -1906,6 +1935,8 @@ function opJoin(){if(!editable())return;const ts=S.sync?S.tracks.filter(t=>!t.lo
   const keep=t=>(t.cuts||[]).filter(c=>{const x=t.off+c,inside=!hasSel()||(x>=S.sel.a-1e-4&&x<=S.sel.b+1e-4);if(inside)n++;return !inside});
   const res=tt.map(t=>[t,keep(t)]);if(!n)return toast('Keine Schnitte im Bereich');pushUndo('Schnitte entfernen');logOp(tt,{k:'join',a:hasSel()?S.sel.a:null,b:hasSel()?S.sel.b:null});for(const[t,c]of res)t.cuts=c;changed();toast(n+(n===1?' Schnitt':' Schnitte')+' entfernt')}
 function cutNear(t,x){for(const c of t.cuts||[])if(Math.abs(timeToX(t.off+c)-x)<=6)return c;return null}
+function removeCutAt(t,c){const abs=t.off+c,grp=(S.sync?S.tracks.filter(x=>!x.lock||x===t):[t]).filter(x=>(x.cuts||[]).some(v=>Math.abs(x.off+v-abs)<.002));if(!grp.length)return;stopAll();pushUndo('Schnitt entfernen');
+  for(const x of grp){logOp([x],{k:'join',a:abs,b:abs});x.cuts=x.cuts.filter(v=>Math.abs(x.off+v-abs)>=.002)}changed();toast(grp.length>1?`Schnitt entfernt (${grp.length} Spuren)`:'Schnitt entfernt',1800)}
 function removeCut(t,c){pushUndo('Schnitt entfernen');logOp([t],{k:'join',a:t.off+c,b:t.off+c});t.cuts=t.cuts.filter(x=>x!==c);changed()}
 function segmentAt(t,tm){const n=tLen(t)/SR,l=tm-t.off;if(l<0||l>n)return null;const e=[0,...(t.cuts||[]),n];for(let i=0;i<e.length-1;i++)if(l>=e[i]&&l<=e[i+1])return[t.off+e[i],t.off+e[i+1]];return null}
 /* Passage [a,b] ausschneiden und an Zeit T (Ziel-Zeitachse) wieder einfügen – der Rest rückt nach */
@@ -2442,8 +2473,8 @@ function updUI(){renderLog();renderHid();$('#bUndo').disabled=!S.undo.length;$('
 function showHelp(){const K=(...k)=>k.map(x=>`<kbd>${x}</kbd>`).join(' '),row=(a,...k)=>`<div><span>${a}</span><span>${K(...k)}</span></div>`;
   modal(`<h3>Tastenkürzel &amp; Maus</h3><div class="keys">
   <h5>Wiedergabe &amp; Aufnahme</h5>${row('Abspielen / Stopp','Leertaste')}${row('Auswahl in Schleife','Shift+Leertaste')}${row('Pause / Fortsetzen','P')}${row('Aufnahme starten / beenden','R')}${row('Schleife an/aus','L')}${row('Zum Anfang / Ende','Pos1','Ende')}${row('Cursor ±1 s (Strg: ±10 s)','←','→')}${row('Auswahl erweitern','Shift+←','Shift+→')}${row('Spur wechseln (Shift: mehrere)','↑','↓')}${row('Stopp / Auswahl aufheben','Esc')}
-  <h5>Bearbeiten</h5>${row('Rückgängig / Wiederholen','Strg+Z','Strg+Y')}${row('Ausschneiden / Kopieren / Einfügen','Strg+X','Strg+C','Strg+V')}${row('Löschen','Entf')}${row('Stille','Strg+L')}${row('Zuschneiden (Rest weg)','Strg+K')}${row('Duplizieren','Strg+D')}${row('Alles auswählen','Strg+A')}${row('Stumm / Solo','M','S')}${row('Letzten Effekt wiederholen','Strg+R')}${row('Spuren synchron (Sync)','Y')}${row('Neue leere Spur','N')}
-  <h5>Schnitt &amp; Hüllkurve</h5>${row('Schnitt (bei Auswahl: an beiden Rändern)','I','Strg+I')}${row('Passage verschieben (Anfang landet an der Marke, Platz wird gemacht)','Markieren, dann ziehen')}${row('Ohne Magnet platzieren','Shift beim Ziehen')}${row('Passage ausblenden (zurückholbar über die gelbe Markierung)','Strg+Shift+X')}${row('Magnet an Schnitten anderer Spuren (blaue Linie)','Cursor, Auswahl, Schnitte und Passagen rasten ein')}${row('Passage in andere Spur / neue Spur','Auf andere Spur bzw. unter die letzte ziehen (ohne Sync)')}${row('Schnitt verschieben','Weiße Linie ziehen')}${row('Hüllkurven-Modus / zurücksetzen (mit Markierung nur dort)','H','Shift+H')}${row('Punkt setzen / Linienstück verschieben','Klick auf die Linie / Linie ziehen')}${row('Punkt nur hoch/runter ziehen (Zeit fixiert)','Shift beim Ziehen halten')}${row('Punkt löschen','Doppelklick','Alt+Klick')}${row('Mehrere Punkte auswählen','Neben der Linie ziehen (Rechteck)','Shift: dazu')}${row('Ausgewählte Punkte verschieben / löschen','Ziehen','Entf')}${row('Alle Punkte der Spur auswählen','Strg+A (im Hüllkurven-Modus)')}${row('Ganze Auswahl lauter/leiser','In Auswahl hoch/runter ziehen')}
+  <h5>Bearbeiten</h5>${row('Rückgängig / Wiederholen','Strg+Z','Strg+Y')}${row('Ausschneiden / Kopieren / Einfügen','Strg+X','Strg+C','Strg+V')}${row('Löschen','Entf')}${row('Stumm schalten (Länge bleibt)','Strg+L')}${row('Zuschneiden (Rest weg)','Strg+K')}${row('Als neue Spur','Strg+D')}${row('Alles auswählen','Strg+A')}${row('Stumm / Solo','M','S')}${row('Letzten Effekt wiederholen','Strg+R')}${row('Spuren synchron (Sync)','Y')}${row('Neue leere Spur','N')}
+  <h5>Schnitt &amp; Hüllkurve</h5>${row('Schnitt (bei Auswahl: an beiden Rändern)','I','Strg+I')}${row('Passage verschieben (Anfang landet an der Marke, Platz wird gemacht)','Markieren, dann ziehen')}${row('Ohne Magnet platzieren','Shift beim Ziehen')}${row('Passage ausblenden (zurückholbar über die gelbe Markierung)','Strg+Shift+X')}${row('Magnet an Schnitten anderer Spuren (blaue Linie)','Cursor, Auswahl, Schnitte und Passagen rasten ein')}${row('Passage in andere Spur / neue Spur','Auf andere Spur bzw. unter die letzte ziehen (ohne Sync)')}${row('Schnitt verschieben','Weiße Linie ziehen')}${row('Schnitt entfernen','Doppelklick auf die Linie')}${row('Hüllkurven-Modus / zurücksetzen (mit Markierung nur dort)','H','Shift+H')}${row('Punkt setzen / Linienstück verschieben','Klick auf die Linie / Linie ziehen')}${row('Punkt nur hoch/runter ziehen (Zeit fixiert)','Shift beim Ziehen halten')}${row('Punkt löschen','Doppelklick','Alt+Klick')}${row('Mehrere Punkte auswählen','Neben der Linie ziehen (Rechteck)','Shift: dazu')}${row('Ausgewählte Punkte verschieben / löschen','Ziehen','Entf')}${row('Alle Punkte der Spur auswählen','Strg+A (im Hüllkurven-Modus)')}${row('Ganze Auswahl lauter/leiser','In Auswahl hoch/runter ziehen')}
   <h5>Projekt</h5>${row('Projekt speichern / unter …','Strg+S','Strg+Shift+S')}${row('Seitenleiste ein/aus','Tab')}
   <h5>Kapitel, Kommentare, Untertitel</h5>${row('Kapitel an Abspielposition (auch beim Abspielen)','B')}${row('Vorheriges / nächstes Kapitel',',','.')}${row('Kommentar (Auswahl oder am Cursor)','K')}${row('Untertitel (beim Abspielen: 1× Start, 2× Ende)','T')}${row('Ausgewählten Text löschen','Entf')}${row('In Textspur: Bereich anlegen / bearbeiten','Ziehen','Doppelklick')}${row('Textspur höher ziehen (mehrzeilig)','Unterkante ziehen')}${row('In Textspur suchen','Lupe')}
   <h5>Ansicht &amp; Datei</h5>${row('Vergrößern / Verkleinern','+','−')}${row('Alles einpassen','F')}${row('Auf Auswahl zoomen','Z')}${row('Importieren / Exportieren','Strg+O','Strg+E')}${row('Diese Hilfe','?')}
@@ -2464,7 +2495,9 @@ tracksEl.addEventListener('pointerdown',e=>{
     if(hh&&e.button===0){e.preventDefault();hidMenu(hh.gid,e.clientX,e.clientY);return}}/* Klick auf das gelbe Etikett einer ausgeblendeten Passage */
   if(S.tsel){S.tsel=null;renderTextUI()}
   /* Doppelklick = Passage markieren – außer im Hüllkurven-Modus: dort löscht Doppelklick einen Punkt (siehe envDown) */
-  if(e.button===0&&!S.envMode&&!e.altKey&&!e.shiftKey&&!e.ctrlKey&&dblCheck(e,'tw'+t.id)){e.preventDefault();selectSegment(t,T(e));return}
+  const cn0=e.button===0&&!S.envMode&&!e.altKey&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&editable()?cutNear(t,X(e)):null;
+  if(cn0!=null){if(dblCheck(e,'cut'+t.id)){e.preventDefault();removeCutAt(t,cn0);return}}/* Doppelklick auf eine Schnittlinie = Schnitt entfernen */
+  else if(e.button===0&&!S.envMode&&!e.altKey&&!e.shiftKey&&!e.ctrlKey&&dblCheck(e,'tw'+t.id)){e.preventDefault();selectSegment(t,T(e));return}
   if(e.button===1){e.preventDefault();const st=S.view.t0;tracksEl.setPointerCapture(e.pointerId);document.body.classList.add('panning');
     let moved=false;const mv=ev=>{if(!moved&&Math.abs(ev.clientX-sx)<4)return;moved=true;S.view.t0=st-(ev.clientX-sx)/S.view.pps;clampView();invalidate()},up=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);document.body.classList.remove('panning');if(!moved&&!mouseBlocked())togglePause()};
     tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);return}
@@ -2512,7 +2545,7 @@ tracksEl.addEventListener('pointermove',e=>{if(e.buttons)return;const tw=e.targe
   if(S.envMode){const p=envNear(t,x,y,r.height),lt=tm-t.off,onL=!p&&tLen(t)&&lt>=0&&lt<=tLen(t)/SR&&Math.abs(envY(envDbAt(t,lt),r.height)-y)<=7,inS=hasSel()&&tm>S.sel.a&&tm<S.sel.b;
     c=p?'move':onL?CUR_PLUS:inS?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:onL?'Linie ziehen: Stück zwischen zwei Punkten hoch/runter · Klicken: Punkt setzen':inS?'Hoch/runter ziehen: ganze Auswahl lauter/leiser':'Ziehen: Punkte mit Rechteck auswählen'}
   else if(e.altKey)c='grab';
-  else if(cutNear(t,x)!=null){c='col-resize';tip='Schnitt verschieben (ziehen) · Doppelklick daneben: Passage markieren'}
+  else if(cutNear(t,x)!=null){c='col-resize';tip='Schnitt verschieben (ziehen) · Doppelklick: Schnitt entfernen'}
   else if(t.cuts&&t.cuts.length&&y<14){c='grab';tip='Klick: Passage markieren · Ziehen: Passage verschieben'}
   else if((t.sel||S.sync)&&hasSel()){if(Math.abs(x-timeToX(S.sel.a))<=5||Math.abs(x-timeToX(S.sel.b))<=5)c='ew-resize';else if(tm>S.sel.a&&tm<S.sel.b){c='grab';tip='Ziehen: markierte Passage verschieben'}}
   tw.style.cursor=c;DS.hoverTip(tw,tip,e)});/* Hinweis folgt der Maus (graue Box) */
@@ -2522,9 +2555,9 @@ tracksEl.addEventListener('contextmenu',e=>{const row=e.target.closest('.trk');i
   S.focus=t.id;updRows();invalidate();updUI();const hs=hasSel(),i=S.tracks.indexOf(t),cn=tw?cutNear(t,e.clientX-tw.getBoundingClientRect().left):null,he=t.env&&t.env.length;
   /* Passage für die Farbe: Markierung (falls Klick darin), sonst Abschnitt zwischen Schnitten, sonst ganze Spur */
   const tmc=tw?Math.max(0,xToTime(e.clientX-tw.getBoundingClientRect().left)):S.sel.a,pg=hs&&tmc>=S.sel.a&&tmc<=S.sel.b?[S.sel.a,S.sel.b]:(segmentAt(t,tmc)||[t.off,tEnd(t)]);
-  ctxMenu(e.clientX,e.clientY,[['Ausschneiden',opCut,'Strg+X',hs],['Kopieren',opCopy,'Strg+C',hs],['Einfügen',opPaste,'Strg+V',!!S.clip],['Löschen',opDelete,'Entf',hs],['Ausblenden (zurückholbar)',opHide,'Strg+Shift+X',hs],['Stille',opSilence,'Strg+L',hs],['Zuschneiden',opTrim,'Strg+K',hs],['Duplizieren',opDup,'Strg+D'],'-',
+  ctxMenu(e.clientX,e.clientY,[['Ausschneiden',opCut,'Strg+X',hs],['Kopieren',opCopy,'Strg+C',hs],['Einfügen',opPaste,'Strg+V',!!S.clip],['Löschen',opDelete,'Entf',hs],['Ausblenden (zurückholbar)',opHide,'Strg+Shift+X',hs],['Stumm schalten',opSilence,'Strg+L',hs],['Nur Auswahl behalten',opTrim,'Strg+K',hs],['Als neue Spur',opDup,'Strg+D'],'-',
     tw&&tLen(t)?{sw:true,label:'Farbe der Passage',colors:PCOL,cur:clrAt(t,pg[0]+(pg[1]-pg[0])/2),pick:c=>setPassageColor(t,pg[0],pg[1],c)}:null,'-',
-    ['Schnitt',opSplit,'I'],cn!=null?['Schnitt entfernen',()=>removeCut(t,cn)]:null,(t.cuts||[]).length?['Schnitte im Bereich entfernen',opJoin]:null,
+    ['Schnitt setzen',opSplit,'I'],cn!=null?['Schnitt entfernen',()=>removeCutAt(t,cn),'Doppelklick']:null,(t.cuts||[]).length?['Schnitte im Bereich entfernen',opJoin]:null,
     ['Hüllkurve bearbeiten',()=>{if(!S.envMode)toggleEnv()},'H'],he?['Hüllkurve ins Audio übernehmen',envApply]:null,he?['Hüllkurve zurücksetzen',envReset]:null,'-',
     ['Kapitel hier setzen',()=>addText('marks',S.sel.a,S.sel.a,null,true),'B'],['Kommentar …',()=>quickAdd('notes'),'K'],['Untertitel …',()=>quickAdd('subs'),'T'],'-',
     ['✦ Sprache optimieren …',()=>openFx('enh',true)],['Rauschreduzierung …',()=>openFx('nr',true)],['Rauschprofil aus Auswahl',captureNoise,'',hs],['Normalisieren …',()=>openFx('norm',true)],['Verstärken …',()=>openFx('amp',true)],['Einblenden …',()=>openFx('fin',true)],['Ausblenden …',()=>openFx('fout',true)],'-',
@@ -2588,11 +2621,31 @@ $('#bImport').onclick=$('#wImport').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{importFiles(e.target.files);e.target.value=''};
 $('#bNew').onclick=newProject;$('#bPlay').onclick=togglePlay;$('#bPause').onclick=togglePause;$('#bStop').onclick=()=>{if(R.starting)R.cancel=true;else if(R.on)stopRec();else stopAll()};
 $('#bEnvReset').onclick=()=>envReset(true);$('#bAuto').onclick=toggleAutoBk;$('#bOpen').onclick=openProjectPicker;$('#bSave').onclick=()=>saveProject(false);$('#pname').onclick=()=>saveProject(true);$('#bEnv').onclick=toggleEnv;
-$('#bRec').onclick=$('#wRec').onclick=toggleRec;$('#bStart').onclick=()=>moveCur(0);$('#bEnd').onclick=()=>moveCur(projDur());
+$('#bRec').onclick=$('#wRec').onclick=toggleRec;$('#wEmpty').onclick=()=>{addTrack();toast('Leeres Projekt – jetzt aufnehmen (R), Dateien hineinziehen, einfügen (Strg+V) oder Kapitel/Untertitel anlegen',5000)};$('#bStart').onclick=()=>moveCur(0);$('#bEnd').onclick=()=>moveCur(projDur());
 $('#bLoop').onclick=()=>{S.loop=!S.loop;updTransport()};$('#bSync').onclick=toggleSync;$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;
 $('#bZIn').onclick=()=>zoomAt(1.6);$('#bZOut').onclick=()=>zoomAt(1/1.6);$('#bFit').onclick=fit;$('#bZSel').onclick=zoomSel;$('#bHelp').onclick=showHelp;$('#bExport').onclick=openExport;$('#bAddTrack').onclick=addTrack;
-(()=>{const box=$('#editChips');[['Ausschneiden',opCut,'Strg+X','sel'],['Kopieren',opCopy,'Strg+C','sel'],['Einfügen',opPaste,'Strg+V','clip'],['Löschen',opDelete,'Entf','sel'],['Ausblenden',opHide,'Strg+Shift+X','sel'],['Stille',opSilence,'Strg+L','sel'],['Zuschneiden',opTrim,'Strg+K','sel'],['Duplizieren',opDup,'Strg+D'],['Schnitt',opSplit,'I'],['Schnitte entfernen',opJoin,''],['In Mono',opMono,''],['Alles',selectAll,'Strg+A'],['Hüllkurve übernehmen',envApply,''],['Hüllkurve zurücksetzen',envReset,'']]
-  .forEach(([l,f,k,need])=>{const b=el('button','',l);b.title=l+(k?' ('+k+')':'');if(need)b.dataset.need=need;b.onclick=f;box.append(b)})})();
+(()=>{const box=$('#editChips');box.className='egrp';
+  /* [Gruppe, [Icon, Name, Funktion, Kürzel, braucht, Erklärung]] */
+  const G=[['Zwischenablage',[
+      ['cut','Ausschneiden',opCut,'Strg+X','sel','Auswahl entfernen und in die Zwischenablage legen – zum Einfügen an anderer Stelle.'],
+      ['copy','Kopieren',opCopy,'Strg+C','sel','Auswahl in die Zwischenablage kopieren. Das Original bleibt.'],
+      ['paste','Einfügen',opPaste,'Strg+V','clip','Zwischenablage an der Abspielposition einfügen (ersetzt eine Auswahl). Die Hüllkurve kommt mit.'],
+      ['dup','Als neue Spur',opDup,'Strg+D','','Auswahl – oder die ganze Spur – als neue Spur darunter kopieren. Praktisch, um etwas gefahrlos auszuprobieren.']]],
+    ['Auswahl',[
+      ['trash','Löschen',opDelete,'Entf','sel','Auswahl herausschneiden. Der Rest rückt zusammen, die Aufnahme wird kürzer.'],
+      ['eyeoff','Ausblenden',opHide,'Strg+Shift+X','sel','Wie Löschen, aber aufbewahrt: Die Stelle wird gelb markiert und lässt sich jederzeit zurückholen.'],
+      ['mute','Stumm schalten',opSilence,'Strg+L','sel','Auswahl über die Hüllkurve stumm schalten. Die Länge bleibt gleich – gut für Huster oder Geräusche, wenn alles synchron bleiben soll.'],
+      ['crop','Nur Auswahl behalten',opTrim,'Strg+K','sel','Alles außerhalb der Auswahl löschen – z. B. um Vor- und Nachlauf einer Aufnahme abzuschneiden.'],
+      ['selall','Alles auswählen',selectAll,'Strg+A','','Alle Spuren über die ganze Länge auswählen.']]],
+    ['Schnitte & Spur',[
+      ['split','Schnitt setzen',opSplit,'I','','Teilt die Spur an der Abspielposition. Schnitte sind Markierungen: Das Audio bleibt gleich, aber Passagen lassen sich so einzeln anfassen, verschieben und färben.'],
+      ['unsplit','Schnitte entfernen',opJoin,'','','Entfernt die Schnittmarken in der Auswahl (ohne Auswahl: alle). Das Audio bleibt unverändert. Einzelne Schnitte: Doppelklick auf die Linie.'],
+      ['mono','In Mono umwandeln',opMono,'','','Macht aus einer Stereospur eine Monospur (beide Seiten gemischt). Für Sprache reicht Mono und spart die Hälfte Speicher.']]],
+    ['Hüllkurve',[
+      ['envwrite','Ins Audio schreiben',envApply,'','','Rechnet die Hüllkurve fest ins Audio ein und entfernt danach ihre Punkte. Meist nicht nötig – Wiedergabe und Export beachten die Hüllkurve ohnehin. Sinnvoll, bevor du eine Spur weitergibst oder einen Effekt auf das bereits abgesenkte Audio anwenden willst.'],
+      ['undo','Hüllkurve zurücksetzen',envReset,'Shift+H','','Entfernt die Hüllkurvenpunkte – mit Markierung nur dort, sonst überall. Das Audio klingt dann wieder wie vorher.']]]];
+  for(const[g,items]of G){box.append(el('div','eg',g));const row=el('div','chipsrow er');
+    for(const[ic,l,f,k,need,tip]of items){const b=el('button','',(I[ic]||'')+`<span>${l}</span>`);b.dataset.tip=`<b>${l}</b><br>${tip}`+(k?`<span class="def">${k}</span>`:'');if(need)b.dataset.need=need;b.onclick=f;row.append(b)}box.append(row)}})();
 $('#selOut').onchange=e=>setOutput(e.target.value);$('#selIn').onchange=e=>{cfg.inDev=e.target.value;saveCfg();if(MON.on)toggleMon(true)};
 $('#bTone').onclick=testTone;$('#bMon').onclick=()=>toggleMon();
 $('#bPerm').onclick=async()=>{try{const s=await navigator.mediaDevices.getUserMedia({audio:true});s.getTracks().forEach(t=>t.stop());await refreshDevices();if(cfg.outDev)setOutput(cfg.outDev,true)}catch(e){toast('Zugriff verweigert: '+e.message)}};
@@ -2602,8 +2655,23 @@ navigator.mediaDevices?.addEventListener?.('devicechange',refreshDevices);
 /* Seitenleiste & einklappbare Abschnitte */
 function toggleSide(force){const off=force!=null?!force:!document.body.classList.contains('sideoff');document.body.classList.toggle('sideoff',off);$('#bSide').classList.toggle('on',!off);lsSet('sideoff',off);clampView();invalidate()}
 $('#bSide').onclick=()=>toggleSide();if(lsGet('sideoff',false))toggleSide(false);
-(()=>{const col=lsGet('seccol',{});$$('#side .sec').forEach(sec=>{const h=$('h4',sec),k=h.firstChild.textContent.trim();h.insertAdjacentHTML('afterbegin',I.chev);if(col[k])sec.classList.add('col');
-  h.title='Klick: ein-/ausklappen';h.addEventListener('click',e=>{if(e.target.closest('kbd,button'))return;sec.classList.toggle('col');col[k]=sec.classList.contains('col');lsSet('seccol',col)})})})();
+(()=>{const col=lsGet('seccol',{});$$('#side .sec').forEach(sec=>{const h=$('h4',sec),k=h.firstChild.textContent.trim();sec.dataset.k=k;h.insertAdjacentHTML('afterbegin',I.chev);h.insertAdjacentHTML('beforeend','<span class="grip">'+I.grip+'</span>');if(col[k])sec.classList.add('col');
+  h.title='Klick: ein-/ausklappen · Ziehen: Reihenfolge ändern';h.addEventListener('click',e=>{if(h.dataset.dragged){delete h.dataset.dragged;return}if(e.target.closest('kbd,button'))return;sec.classList.toggle('col');col[k]=sec.classList.contains('col');lsSet('seccol',col)})})})();
+/* Reihenfolge der Abschnitte: gespeichert in „secorder“; per Ziehen an der Überschrift änderbar. Neue Abschnitte (spätere Versionen) landen an ihrer Standardstelle. */
+(()=>{const side=$('#side'),secs=()=>[...side.children].filter(x=>x.classList.contains('sec'));if(!secs().length)return;
+  const tail=secs().at(-1).nextSibling,D=secs().map(x=>x.dataset.k),ord=lsGet('secorder',null);
+  if(Array.isArray(ord)){const R=ord.filter(k=>D.includes(k));D.forEach((k,i)=>{if(!R.includes(k)){const pv=D.slice(0,i).reverse().find(x=>R.includes(x));R.splice(pv?R.indexOf(pv)+1:0,0,k)}});
+    const m=new Map(secs().map(x=>[x.dataset.k,x]));for(const k of R)side.insertBefore(m.get(k),tail)}
+  for(const sec of secs()){const h=$('h4',sec);
+    h.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('kbd,button,input,select'))return;const sy=e.clientY;let drag=false,ph=null,scr=null;
+      const mv=ev=>{if(!drag){if(Math.abs(ev.clientY-sy)<6)return;drag=true;try{h.setPointerCapture(ev.pointerId)}catch{}sec.classList.add('sdrag');document.body.classList.add('secdragging');ph=el('div','sdrop');sec.after(ph)}
+        const others=secs().filter(x=>x!==sec&&x.offsetParent);let before=null;for(const x of others){const r=x.getBoundingClientRect();if(ev.clientY<r.top+Math.min(r.height/2,40)){before=x;break}}
+        if(before)side.insertBefore(ph,before);else side.insertBefore(ph,tail);
+        const sr=side.getBoundingClientRect(),edge=40;clearInterval(scr);if(ev.clientY<sr.top+edge)scr=setInterval(()=>side.scrollTop-=12,16);else if(ev.clientY>sr.bottom-edge)scr=setInterval(()=>side.scrollTop+=12,16)};
+      const up=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);clearInterval(scr);if(!drag)return;
+        side.insertBefore(sec,ph);ph.remove();sec.classList.remove('sdrag');document.body.classList.remove('secdragging');h.dataset.dragged='1';setTimeout(()=>delete h.dataset.dragged,50);
+        lsSet('secorder',secs().map(x=>x.dataset.k));toast('Reihenfolge der Seitenleiste gespeichert',1800)};
+      h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up)})}})();
 $('#bkOn').onchange=e=>{BK.on=e.target.checked;saveBk();if(BK.on&&!bkDir)bkPick();bkSchedule();updBk()};
 $('#bkMin').onchange=e=>{BK.min=+e.target.value;saveBk();bkSchedule();updBk()};$('#bkKeep').onchange=e=>{BK.keep=+e.target.value;saveBk()};
 $('#bStoreClr').onclick=clearStore;updStore();

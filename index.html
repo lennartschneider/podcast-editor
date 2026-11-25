@@ -2812,7 +2812,9 @@ $('#recCh').value=String(cfg.recCh);$('#recCh').onchange=e=>{cfg.recCh=+e.target
 navigator.mediaDevices?.addEventListener?.('devicechange',refreshDevices);
 /* Seitenleiste & einklappbare Abschnitte */
 function toggleSide(force){const off=force!=null?!force:!document.body.classList.contains('sideoff');document.body.classList.toggle('sideoff',off);$('#bSide').classList.toggle('on',!off);lsSet('sideoff',off);clampView();invalidate()}
-$('#bSide').onclick=()=>toggleSide();if(lsGet('sideoff',false))toggleSide(false);
+$('#bSide').onclick=()=>toggleSide();
+/* Start: auf Handys/sehr schmalen Fenstern Seitenleiste zu (ohne die gespeicherte Einstellung zu ändern), sonst wie zuletzt */
+if(Math.min(screen.width||innerWidth,screen.height||innerHeight)<700||innerWidth<760){document.body.classList.add('sideoff');$('#bSide').classList.remove('on')}else if(lsGet('sideoff',false))toggleSide(false);
 (()=>{const col=lsGet('seccol',{});$$('#side .sec').forEach(sec=>{const h=$('h4',sec),k=h.firstChild.textContent.trim();sec.dataset.k=k;h.insertAdjacentHTML('afterbegin',I.chev);h.insertAdjacentHTML('beforeend','<span class="grip">'+I.grip+'</span>');if(col[k])sec.classList.add('col');
   h.title='Klick: ein-/ausklappen · Ziehen: Reihenfolge ändern';h.addEventListener('click',e=>{if(h.dataset.dragged){delete h.dataset.dragged;return}if(e.target.closest('kbd,button'))return;sec.classList.toggle('col');col[k]=sec.classList.contains('col');lsSet('seccol',col)})})})();
 /* Reihenfolge der Abschnitte: gespeichert in „secorder“; per Ziehen an der Überschrift änderbar. Neue Abschnitte (spätere Versionen) landen an ihrer Standardstelle. */

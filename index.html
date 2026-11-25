@@ -2008,6 +2008,8 @@ function envDown(e,t,tw){if(!tLen(t))return;const r=tw.getBoundingClientRect(),H
       grp.forEach((q,i)=>{q.t=o[i][0]+dt;q.db=clamp(o[i][1]+dd,ENV_MIN,ENV_MAX)});setStatus(`${grp.length} Punkte · ${ev.shiftKey?'Zeit fixiert (Shift)':(dt>=0?'+':'')+nf(dt,2)+' s'} · ${fmtDb(dd)} dB`);invalidateTrack(t)}}
   else if(near){const p=t.env.find(q=>Math.abs(q.t-near.t)<1e-9&&q.db===near.db),i=t.env.indexOf(p),lo=i>0?t.env[i-1].t+.001:0,hi=i<t.env.length-1?t.env[i+1].t-.001:len;S.envDrag=p;const pt0=p.t;/* Shift beim Ziehen: Zeitposition bleibt fixiert, nur die Höhe ändert sich */
     mv=ev=>{if(!moved&&Math.abs(ev.clientX-sx)<2&&Math.abs(ev.clientY-sy)<2)return;moved=true;p.t=ev.shiftKey?pt0:clamp(xToTime(ev.clientX-r.left)-t.off,lo,hi);p.db=envDb(ev.clientY-r.top,H);if(ev.shiftKey)setStatus(`Zeit fixiert (Shift) · ${fmtDb(p.db)} dB`);invalidateTrack(t)}}
+  else if(!onLine&&inSel&&t.env.some(q=>q.sel)){/* ausgewählte Punkte vorhanden: nur diese hoch/runter */const inner=t.env.filter(q=>q.sel),orig=inner.map(q=>q.db);
+    mv=ev=>{moved=true;let dd=-(ev.clientY-sy)*(ev.shiftKey?.05:.2);dd=Math.round(dd*10)/10;inner.forEach((q,i)=>q.db=clamp(orig[i]+dd,ENV_MIN,ENV_MAX));setStatus(`${inner.length} ${inner.length===1?'Punkt':'Punkte'} ${fmtDb(dd)} dB`);invalidateTrack(t)}}
   else if(!onLine&&inSel){const a=clamp(S.sel.a-t.off,0,len),b=clamp(S.sel.b-t.off,0,len),rr=.02;
     for(const lt of[Math.max(0,a-rr),a,b,Math.min(len,b+rr)])if(!t.env.some(p=>Math.abs(p.t-lt)<.0005))t.env.push({t:lt,db:Math.round(envDbAt(t,lt)*10)/10});t.env.sort((p,q)=>p.t-q.t);
     const inner=t.env.filter(p=>p.t>=a-1e-6&&p.t<=b+1e-6),orig=inner.map(p=>p.db);
@@ -2701,7 +2703,7 @@ const CUR_PLUS='url("data:image/svg+xml,'+encodeURIComponent("<svg xmlns='http:/
 tracksEl.addEventListener('pointermove',e=>{if(e.buttons)return;const tw=e.target.closest('.tw');if(!tw)return;const t=byId(+tw.closest('.trk').dataset.id);if(!t)return;let c='text',tip='';
   const r=tw.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,tm=xToTime(x);
   if(S.envMode){const p=envNear(t,x,y,r.height),lt=tm-t.off,onL=!p&&tLen(t)&&lt>=0&&lt<=tLen(t)/SR&&Math.abs(envY(envDbAt(t,lt),r.height)-y)<=7,inS=hasSel()&&tm>S.sel.a&&tm<S.sel.b;
-    c=p?'move':onL?CUR_PLUS:inS?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:onL?'Linie ziehen: Stück zwischen zwei Punkten hoch/runter · Klicken: Punkt setzen':inS?'Hoch/runter ziehen: ganze Auswahl lauter/leiser':'Ziehen: Punkte mit Rechteck auswählen'}
+    c=p?'move':onL?CUR_PLUS:inS?'ns-resize':'crosshair';tip=p?`${fmtDb(p.db)} dB · Doppelklick: Punkt löschen`:onL?'Linie ziehen: Stück zwischen zwei Punkten hoch/runter · Klicken: Punkt setzen':inS?((t.env||[]).some(q=>q.sel)?'Hoch/runter ziehen: ausgewählte Punkte lauter/leiser':'Hoch/runter ziehen: ganze Auswahl lauter/leiser'):'Ziehen: Punkte mit Rechteck auswählen'}
   else if(e.altKey)c='grab';
   else if(cutNear(t,x)!=null){c='col-resize';tip='Schnitt verschieben (ziehen) · Doppelklick: Schnitt entfernen'}
   else if(t.cuts&&t.cuts.length&&y<14){c='grab';tip='Klick: Passage markieren · Ziehen: Passage verschieben'}

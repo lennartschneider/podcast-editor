@@ -2508,15 +2508,18 @@ async function writeProject(write,onp){const order=[],tracks=[];let off=0;
   const head={app:'Audio Editor',v:1,sr:SR,saved:new Date().toISOString(),tid:TID,mid:MID,sel:S.sel,view:S.view,sync:S.sync,marks:S.marks,notes:S.notes,subs:S.subs,lanes:S.lanesOn,noise:S.noise?{dur:S.noise.dur,pow:Array.from(S.noise.pow)}:null,tracks};
   const js=new TextEncoder().encode(JSON.stringify(head)),pre=new Uint8Array(16);pre.set(new TextEncoder().encode(PMAGIC));new DataView(pre.buffer).setUint32(8,js.length,true);
   await write(pre);await write(js);await write(new Uint8Array((4-(16+js.length)%4)%4));let done=0;
-  for(const s of order)for(const[c]of s.chunks()){await write(c);done+=c.length*4;if(onp)onp(done/Math.max(1,off))}return 16+js.length+off}
+  /* Audio in 8-MB-Paketen schreiben: nach vielen Schnitten besteht eine Spur aus tausenden kleinen Blöcken – einzeln geschrieben dauert das Minuten */
+  const CAP=1<<21,buf=new Float32Array(CAP);let fill=0;const flush=async()=>{if(!fill)return;await write(buf.slice(0,fill));done+=fill*4;fill=0;if(onp)onp(done/Math.max(1,off))};
+  for(const s of order)for(const[c]of s.chunks()){if(c.length>=CAP/2){await flush();await write(c);done+=c.length*4;if(onp)onp(done/Math.max(1,off));continue}if(fill+c.length>CAP)await flush();buf.set(c,fill);fill+=c.length}
+  await flush();return 16+js.length+off}
 async function projectBlob(){const parts=[];await writeProject(x=>{parts.push(x)});return new Blob(parts,{type:'application/octet-stream'})}
 async function saveProject(as){if(!S.tracks.length)return toast('Noch keine Spuren zum Speichern');if(R.on||S.busy)return;let h=as?null:S.projHandle,name=(S.projName||safeName(S.tracks[0].name))+'.aeproj';
   if(!h&&window.showSaveFilePicker){try{h=await showSaveFilePicker({suggestedName:name,types:[{description:'Podcast-Editor-Projekt',accept:{'application/octet-stream':['.aeproj']}}]})}catch(e){if(e.name==='AbortError')return;h=null}}
   setBusy(true,'Speichere Projekt …');try{let size;
-    if(h){const w=await h.createWritable();size=await writeProject(x=>w.write(x),progress);await w.close();S.projHandle=h;S.projName=h.name.replace(/\.aeproj$/i,'')}
+    if(h){const w=await h.createWritable();S.saving=true;try{size=await writeProject(x=>w.write(x),progress);await w.close()}catch(e){try{await w.abort()}catch{}throw e}finally{S.saving=false}S.projHandle=h;S.projName=h.name.replace(/\.aeproj$/i,'')}
     else{const blob=await projectBlob();size=blob.size;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000);S.projName=name.replace(/\.aeproj$/i,'')}
     S.dirty=false;updTitle();lsSet('exName',S.projName);toast(`Projekt „${S.projName}“ gespeichert · ${nf(size/1048576,1)} MB`)}
-  catch(e){console.error(e);toast('Speichern fehlgeschlagen: '+e.message,5000)}finally{setBusy(false)}}
+  catch(e){console.error(e);toast('Speichern fehlgeschlagen: '+e.message+' – die Datei ist evtl. leer, bitte erneut speichern',7000)}finally{setBusy(false)}}
 async function openProjectPicker(){if(window.showOpenFilePicker){try{const[h]=await showOpenFilePicker({types:[{description:'Podcast-Editor-Projekt',accept:{'application/octet-stream':['.aeproj']}}]});return openProject(await h.getFile(),h)}catch(e){if(e.name==='AbortError')return}}
   const f=el('input');f.type='file';f.accept='.aeproj';f.onchange=()=>f.files[0]&&openProject(f.files[0],null);f.click()}
 async function openProject(file,handle){if(!editable())return;if(S.tracks.length&&S.dirty&&!await confirmBox('Projekt öffnen?','Die aktuellen Spuren werden ersetzt. Ungespeicherte Änderungen gehen verloren (Strg+S speichert vorher).','Öffnen'))return;
@@ -2551,12 +2554,18 @@ async function bkInit(){if(!window.showDirectoryPicker){$('#bkInfo').textContent
 async function bkPick(){try{bkDir=await showDirectoryPicker({id:'ae-backup',mode:'readwrite'});await idb.set('bkdir',bkDir);bkNeed=false;BK.on=true;$('#bkOn').checked=true;saveBk();bkSchedule();updBk();toast('Sicherungsordner: '+bkDir.name);S.dirtyBk=true;runBackup(false)}catch(e){if(e.name!=='AbortError')toast(e.message);updBk()}}
 async function bkPerm(ask){if(!bkDir)return false;try{let p=await bkDir.queryPermission({mode:'readwrite'});if(p!=='granted'&&ask)p=await bkDir.requestPermission({mode:'readwrite'});return p==='granted'}catch{return false}}
 function bkSchedule(){clearInterval(bkT);if(BK.on)bkT=setInterval(()=>runBackup(false),BK.min*60000)}
-async function runBackup(manual){if(!S.tracks.length){if(manual)toast('Nichts zu sichern');return}if(!manual&&(!S.dirtyBk||R.on||S.busy))return;if(!bkDir)return manual?bkPick():undefined;
+let bkBusy=false;
+async function runBackup(manual){if(bkBusy){if(manual)toast('Eine Sicherung läuft gerade noch – bitte kurz warten');return}if(!S.tracks.length){if(manual)toast('Nichts zu sichern');return}if(!manual&&(!S.dirtyBk||R.on||S.busy))return;if(!bkDir)return manual?bkPick():undefined;
   if(!await bkPerm(manual)){bkNeed=true;updBk();return}bkNeed=false;
-  $('#bAuto').classList.add('run');
-  try{const base=safeName(S.projName||'Unbenannt')+' Backup ',nm=base+fmtStamp(new Date())+'.aeproj',fh=await bkDir.getFileHandle(nm,{create:true}),w=await fh.createWritable();await writeProject(x=>w.write(x));await w.close();S.dirtyBk=false;bkLast=Date.now();lsSet('bkLast',bkLast);
-    if(BK.keep>0){const list=[];for await(const[n,h]of bkDir.entries())if(h.kind==='file'&&n.startsWith(base)&&n.endsWith('.aeproj'))list.push(n);list.sort();while(list.length>BK.keep)await bkDir.removeEntry(list.shift())}
-    updBk();if(manual)toast('Backup gespeichert: '+nm,3500)}catch(e){console.warn(e);setStatus('Backup fehlgeschlagen: '+e.message)}finally{setTimeout(()=>$('#bAuto').classList.remove('run'),600)}}
+  $('#bAuto').classList.add('run');bkBusy=true;const base=safeName(S.projName||'Unbenannt')+' Backup ',nm=base+fmtStamp(new Date())+'.aeproj';let w=null,made=false;
+  try{const fh=await bkDir.getFileHandle(nm,{create:true});made=true;w=await fh.createWritable();await writeProject(x=>w.write(x));await w.close();w=null;S.dirtyBk=false;bkLast=Date.now();lsSet('bkLast',bkLast);
+    /* Aufräumen: leere Dateien (abgebrochene Sicherungen) entfernen und nicht mitzählen, dann nur die neuesten BK.keep behalten */
+    if(BK.keep>0){const list=[];for await(const[n,h]of bkDir.entries())if(h.kind==='file'&&n.startsWith(base)&&n.endsWith('.aeproj')&&n!==nm){let sz=1;try{sz=(await h.getFile()).size}catch{}if(sz===0){try{await bkDir.removeEntry(n)}catch{}}else list.push(n)}
+      list.push(nm);list.sort();while(list.length>BK.keep){const x=list.shift();if(x!==nm)await bkDir.removeEntry(x)}}
+    updBk();if(manual)toast('Backup gespeichert: '+nm,3500)}
+  catch(e){console.warn(e);if(w){try{await w.abort()}catch{}}if(made){try{await bkDir.removeEntry(nm)}catch{}}/* keine leere Datei zurücklassen */
+    setStatus('Backup fehlgeschlagen: '+e.message);toast('Sicherung fehlgeschlagen: '+e.message,6000)}
+  finally{bkBusy=false;setTimeout(()=>$('#bAuto').classList.remove('run'),600)}}
 function updBkIcon(){const a=$('#bAuto');if(!a)return;const tm=bkLast?new Date(bkLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
   a.classList.toggle('on',BK.on&&!!bkDir&&!bkNeed);a.classList.toggle('warn',BK.on&&bkNeed&&!!bkDir&&!!window.showDirectoryPicker);a.classList.toggle('nodir',!bkDir&&!!window.showDirectoryPicker);/* rot: noch kein Sicherungsordner */
   a.title=!window.showDirectoryPicker?'Automatische Sicherung: braucht Chrome oder Edge':!bkDir?(BK.on?'Automatische Sicherung ist an, aber es fehlt noch ein Ordner – Klick: Ordner wählen':'Automatische Sicherung aus – Klick: Ordner wählen und einschalten'):bkNeed?'Sicherung pausiert – Klick: Zugriff auf „'+bkDir.name+'“ erlauben':
@@ -2582,7 +2591,7 @@ const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=index
    So kostet z. B. ein Hüllkurvenpunkt fast nichts – nur wirklich neues Audio wird gespeichert. */
 const AID=new WeakMap();let saveN=0;
 /* Schließen/Neuladen mit ungespeicherten Änderungen (oder laufender Aufnahme/Berechnung): Browser fragt nach. Eigener Text ist in Browsern nicht möglich. */
-window.addEventListener('beforeunload',e=>{if(!(S.tracks.length&&(S.dirty||R.on||S.busy)))return;
+window.addEventListener('beforeunload',e=>{if(!(S.tracks.length&&(S.dirty||R.on||S.busy||bkBusy||S.saving)))return;
   if(saveT&&!R.on&&!S.busy){clearTimeout(saveT);saveSession()}/* Sitzung im Browser so schnell wie möglich sichern, falls doch geschlossen wird */
   e.preventDefault();e.returnValue=''});
 let saveT;function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(saveSession,2000);S.dirtyBk=true;if(!S.dirty){S.dirty=true;updTitle()}}

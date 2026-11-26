@@ -981,18 +981,22 @@ function lraE(E){const step=Math.round(SR*.1),W=30;if(E.length<W+2)return null;c
   for(let j=0;j<E.length;j++){s+=E[j];if(j>=W)s-=E[j-W];if(j>=W-1)st.push(LL(s/(W*step)))}const g=st.filter(v=>v>-70);if(g.length<3)return null;
   const rel=10*Math.log10(g.reduce((a,v)=>a+Math.pow(10,v/10),0)/g.length)-20,h=g.filter(v=>v>rel).sort((x,y)=>x-y);if(h.length<3)return null;return h[Math.floor(h.length*.95)-0]-h[Math.floor(h.length*.1)]}
 /* Leveler: misst die Lautheit im Verlauf und verstärkt leise bzw. dämpft laute Abschnitte unterschiedlich stark (weich geglättet) */
-function leveler(seg,target,maxUp,maxDown,win){const n=seg[0].length,step=Math.round(SR*.1),E=kEnergy(seg,step),ns=E.length;if(ns<10)return null;const I=gateL(E,step);if(!isFinite(I))return null;
+function leveler(seg,target,maxUp,maxDown,win,keepShort){const n=seg[0].length,step=Math.round(SR*.1),E=kEnergy(seg,step),ns=E.length;if(ns<10)return null;const I=gateL(E,step);if(!isFinite(I))return null;
   const half=Math.max(2,Math.round(win/.1/2)),ps=new Float64Array(ns+1);for(let j=0;j<ns;j++)ps[j+1]=ps[j]+E[j];
   /* Abschnitte an die Gesamtlautheit I angleichen (nicht ans Ziel – das erledigt danach die Lautheitsnormalisierung) */
   const g=new Float64Array(ns).fill(NaN),gate=Math.max(-58,I-30);
-  for(let j=0;j<ns;j++){const a=Math.max(0,j-half),b=Math.min(ns,j+half+1),L=-.691+10*Math.log10((ps[b]-ps[a])/((b-a)*step)+1e-20);if(L>gate)g[j]=clamp(I-L,-maxDown,maxUp)}
+  /* Kurze Einwürfe („aha“, „mhm“ während die andere Person spricht): Im Fenster ist kaum Sprache, die Stille drückt den Messwert –
+     ohne Schutz würden sie voll angehoben. Deshalb Anhebung nach der Sprechdauer im Fenster begrenzen: ≤0,5 s gar nicht, ab 2 s voll. */
+  const actG=Math.max(-58,I-20),pa=new Float64Array(ns+1);for(let j=0;j<ns;j++)pa[j+1]=pa[j]+(-.691+10*Math.log10(E[j]/step+1e-20)>actG?1:0);let nShort=0;
+  for(let j=0;j<ns;j++){const a=Math.max(0,j-half),b=Math.min(ns,j+half+1),L=-.691+10*Math.log10((ps[b]-ps[a])/((b-a)*step)+1e-20);if(L>gate){
+    const up=keepShort?maxUp*clamp(((pa[b]-pa[a])*.1-.5)/1.5,0,1):maxUp;if(up<maxUp&&I-L>up)nShort++;g[j]=clamp(I-L,-maxDown,up)}}
   /* Pausen: Verstärkung der Nachbarn übernehmen – die kleinere, damit Rauschen in Pausen nicht hochgezogen wird */
   const left=new Float64Array(ns),right=new Float64Array(ns);let last=NaN;for(let j=0;j<ns;j++){if(!isNaN(g[j]))last=g[j];left[j]=last}last=NaN;for(let j=ns-1;j>=0;j--){if(!isNaN(g[j]))last=g[j];right[j]=last}
   const def=0;for(let j=0;j<ns;j++)if(isNaN(g[j])){const l=left[j],r=right[j];g[j]=isNaN(l)?(isNaN(r)?def:r):isNaN(r)?l:Math.min(l,r)}
   for(let pass=0;pass<2;pass++){const q=new Float64Array(ns+1);for(let j=0;j<ns;j++)q[j+1]=q[j]+g[j];for(let j=0;j<ns;j++){const a=Math.max(0,j-half),b=Math.min(ns,j+half+1);g[j]=(q[b]-q[a])/(b-a)}}
   let mn=Infinity,mx=-Infinity;for(const v of g){if(v<mn)mn=v;if(v>mx)mx=v}
   for(let i=0;i<n;i+=64){const pz=clamp(i/step-.5,0,ns-1),j=Math.floor(pz),f=pz-j,db=g[j]+((g[Math.min(ns-1,j+1)]-g[j])*f),gl=db2lin(db),e=Math.min(n,i+64);for(const a of seg)for(let k=i;k<e;k++)a[k]*=gl}
-  return{min:mn,max:mx}}
+  return{min:mn,max:mx,short:nShort>0}}
 function gateL(E,step){const bl=[];for(let j=0;j+4<=E.length;j++)bl.push((E[j]+E[j+1]+E[j+2]+E[j+3])/(4*step));const LL=e=>-.691+10*Math.log10(e);
   const g1=bl.filter(e=>e>0&&LL(e)>-70);if(!g1.length)return -Infinity;const rel=LL(g1.reduce((s,e)=>s+e,0)/g1.length)-10;const g2=g1.filter(e=>LL(e)>rel);return LL(g2.reduce((s,e)=>s+e,0)/g2.length)}
 function biq(type,f,gain,q=.7071){const w=2*Math.PI*Math.min(f,SR*.49)/SR,cs=Math.cos(w),sn=Math.sin(w),A=Math.pow(10,gain/40),al=sn/(2*q);let b0,b1,b2,a0,a1,a2;
@@ -1255,7 +1259,7 @@ const FX=[
 {id:'enh',name:'Sprache optimieren',icon:'enh',star:true,key:'Auto',
  desc:'Ein Klick wie „Enhance Speech“: entfernt Brummen und Rauschen, macht die Stimme klarer, gleicht Lautstärke aus und bringt alles auf Podcast-Pegel. (Klassische Signalverarbeitung, keine KI.)',
  params:[{k:'str',l:'Stärke',type:'sel',opts:[['leicht','Leicht'],['mittel','Mittel'],['stark','Stark']],def:'mittel'},{k:'lufs',l:'Ziel-Lautheit',min:-24,max:-12,step:.5,def:-16,u:'LUFS'},
-  {k:'nr',l:'Rauschen entfernen',type:'chk',def:true},{k:'lev',l:'Lautstärke-Schwankungen ausgleichen (Leveler)',type:'chk',def:true},
+  {k:'nr',l:'Rauschen entfernen',type:'chk',def:true},{k:'lev',l:'Lautstärke-Schwankungen ausgleichen (Leveler)',type:'chk',def:true},{k:'ijx',l:'Kurze Einwürfe nicht anheben',type:'chk',def:true,show:p=>p.lev},
   {k:'quiet',l:'Leise Aufnahme verstärken',type:'chk',def:false},{k:'declip',l:'Übersteuerung reparieren',type:'chk',def:false},{k:'dehum',l:'Brummen entfernen',type:'chk',def:false},
   {k:'mouth',l:'Popp- & Schmatzgeräusche entfernen',type:'chk',def:false},{k:'deess',l:'Zischlaute dämpfen',type:'chk',def:false},
   {k:'eq',l:'Klang: Mulm weg, Präsenz & Luft',type:'chk',def:false},{k:'comp',l:'Dynamik glätten (Kompressor)',type:'chk',def:false}],
@@ -1269,7 +1273,7 @@ const FX=[
    if(p.nr){const pow=S.noise?S.noise.pow:autoProfileFor(t);for(let i=0;i<seg.length;i++)seg[i]=await nrRun(seg[i],pow,{red:E.red+(p.quiet?6:0),sens:6,smooth:3},f=>onp(.08+(i+f)/seg.length*.62))}
    onp(.7);await yieldUI();if(p.deess)await blockwise(seg,part=>deessPart(part,{freq:5000,red:7,sens:50}));
    onp(.72);await yieldUI();if(p.eq){for(const a of seg){runBiq(a,biq('pk',300,E.mud,1));runBiq(a,biq('pk',3500,E.pres,.9));runBiq(a,biq('hs',10000,E.air))}}
-   onp(.78);await yieldUI();if(p.lev)leveler(seg,p.lufs,p.quiet?18:12,10,4);
+   onp(.78);await yieldUI();if(p.lev)leveler(seg,p.lufs,p.quiet?18:12,10,4,p.ijx!==false);
    onp(.85);await yieldUI();if(p.comp){const L=lufs(seg);const off=isFinite(L)?L+16:0;compress(seg,{thr:E.thr+off,ratio:E.ratio,att:8,rel:150,knee:10})}
    if(p.quiet){/* verstärktes Rauschen in den Pausen absenken (−15 dB, weich) */const L=await frameLevels(seg,0,seg[0].length),st=levelStats(L);if(st.ok){const want=new Uint8Array(L.length);for(let f=0;f<L.length;f++)want[f]=L[f]>st.thr?2:L[f]>st.thr-4?1:0;applyGate(seg,holdOpen(want,250),{red:15,rel:150})}}
    onp(.93);await yieldUI();normLufs(seg,p.lufs,true,c);if(notes.length)c.note=notes.join(' · ')+(c.note?' · '+c.note:'');return seg}},
@@ -1357,7 +1361,7 @@ const FX=[
 {id:'norm',name:'Normalisieren',icon:'norm',desc:'Podcast: −16 LUFS (Stereo) bzw. −19 LUFS (Mono) · Streaming-Musik: −14 LUFS.',
  params:[{k:'mode',l:'Methode',type:'sel',opts:[['peak','Spitzenpegel (dBFS)'],['lufs','Lautheit – gesamt (LUFS)'],['level','Lautheit – abschnittsweise angleichen']],def:'peak'},
   {k:'peak',l:'Zielspitze',min:-12,max:0,step:.1,def:-1,u:'dB',show:p=>p.mode==='peak'},{k:'lufs',l:'Ziel-Lautheit',min:-30,max:-10,step:.5,def:-16,u:'LUFS',show:p=>p.mode!=='peak'},
-  {k:'up',l:'Max. Anhebung',min:0,max:24,step:1,def:15,u:'dB',show:p=>p.mode==='level'},{k:'win',l:'Reaktionszeit',min:1,max:15,step:.5,def:4,u:'s',show:p=>p.mode==='level'},
+  {k:'up',l:'Max. Anhebung',min:0,max:24,step:1,def:15,u:'dB',show:p=>p.mode==='level'},{k:'win',l:'Reaktionszeit',min:1,max:15,step:.5,def:4,u:'s',show:p=>p.mode==='level'},{k:'ijx',l:'Kurze Einwürfe nicht anheben',type:'chk',def:true,show:p=>p.mode==='level'},
   {k:'dc',l:'Gleichspannungsversatz (DC) entfernen',type:'chk',def:true},{k:'indep',l:'Stereokanäle einzeln',type:'chk',def:false,show:p=>p.mode==='peak'},{k:'lim',l:'Spitzen mit Limiter abfangen',type:'chk',def:true,show:p=>p.mode==='lufs'}],
  handle:.5,
  info(ts){const t=ts[0],[i0,i1]=trackRange(t);if(i1-i0<2)return scopeTxt(ts);const mv=memoAsync(t,'norm',i0,i1,async()=>{const E=await kEnergyAsync(t.ch,Math.round(SR*.1),i0,i1);return{pk:Math.max(...t.ch.map(s=>rangePeak(s,i0,i1))),L:E.length>=4?gateL(E,Math.round(SR*.1)):-Infinity,R:lraE(E)}});
@@ -1366,7 +1370,7 @@ const FX=[
    return `${ts.length>1?'Erste Spur':'Aktuell'}: Spitze <b>${fmtDb(lin2db(pk))} dBFS</b> · Lautheit <b>${isFinite(L)?nf(L,1)+' LUFS':'–'}</b>${R!=null?` · Schwankung <b>${nf(R,1)} LU</b>`:''}${hint}<br>${scopeTxt(ts)}`},
  run(seg,p,c){if(p.dc)removeDC(seg);
    if(p.mode==='peak'){if(p.indep)seg.forEach(a=>normPeak([a],p.peak));else normPeak(seg,p.peak)}
-   else if(p.mode==='level'){const r=leveler(seg,p.lufs,p.up,12,p.win);normLufs(seg,p.lufs,true,c);if(r)c.note=`leise/laute Abschnitte um ${fmtDb(r.min)} bis ${fmtDb(r.max)} dB angeglichen`}
+   else if(p.mode==='level'){const r=leveler(seg,p.lufs,p.up,12,p.win,p.ijx!==false);normLufs(seg,p.lufs,true,c);if(r)c.note=`leise/laute Abschnitte um ${fmtDb(r.min)} bis ${fmtDb(r.max)} dB angeglichen${r.short?' · kurze Einwürfe nicht angehoben':''}`}
    else normLufs(seg,p.lufs,p.lim,c);return seg}},
 {id:'amp',name:'Verstärken',icon:'amp',params:[{k:'gain',l:'Verstärkung',min:-24,max:24,step:.1,def:3,u:'dB'},{k:'clip',l:'Übersteuern zulassen',type:'chk',def:false}],
  extra(pn,fx){const r=el('div','chipsrow');r.style.margin='8px 0 0';const b=el('button','','Maximal ohne Übersteuern');b.onclick=()=>{const ts=targets();if(!ts)return;const pk=Math.max(...ts.map(t=>{const[i0,i1]=trackRange(t);return Math.max(...t.ch.map(s=>rangePeak(s,i0,i1)))}));if(pk>0){FXP.amp.gain=Math.round(-lin2db(pk)*10)/10;fx.set('gain',FXP.amp.gain)}};r.append(b);pn.append(r)},
@@ -1412,6 +1416,7 @@ const TIPS={
  'enh.nr':['Entfernt gleichmäßige Hintergrundgeräusche wie Rauschen, Lüfter oder Brummen.','An lassen – außer die Aufnahme ist schon sehr sauber.'],
  'enh.eq':['Klangfarbe: nimmt dumpfe, „mulmige“ Anteile heraus und macht die Stimme etwas klarer und frischer.','Aus – einschalten, wenn die Stimme dumpf oder topfig klingt.'],
  'enh.lev':['Gleicht aus, wenn jemand mal lauter und mal leiser spricht oder sich vom Mikrofon wegdreht.','An – besonders bei langen Aufnahmen.'],
+ 'enh.ijx':['Kurze Laute wie „aha“, „mhm“ oder „ja“, während die andere Person spricht, bleiben so leise, wie sie aufgenommen wurden. Ohne diese Option werden sie wie zu leise Sprache kräftig angehoben und stören dann.','An – besonders bei Gesprächen mit mehreren Spuren.'],
  'enh.quiet':['Für Aufnahmen, die viel zu leise sind: Beim Lauterziehen würde das Rauschen mitwachsen. Deshalb wird stärker entrauscht, leise Stellen werden kräftiger angehoben, und die Pausen werden danach etwas abgesenkt.','Nur einschalten, wenn die Spur deutlich zu leise ist (Lautheit links weit unter −24 LUFS).'],
  'enh.declip':['Repariert abgeschnittene Spitzen, wenn die Aufnahme übersteuert war (kratziger, verzerrter Klang). Wird als Erstes angewendet.','Nur bei übersteuerten Aufnahmen. Mehr Einstellungen: Effekt „Übersteuerung reparieren“.'],
  'enh.dehum':['Erkennt Netzbrummen (50 oder 60 Hz) automatisch und filtert es samt Obertönen heraus. Ist kein Brummen da, passiert nichts.','Einschalten, wenn ein tiefes Summen zu hören ist.'],
@@ -1462,6 +1467,7 @@ const TIPS={
  'norm.lufs':['Wie laut es sich insgesamt anfühlt. Eine Zahl näher an 0 bedeutet lauter.','Podcast −16 LUFS (Stereo) bzw. −19 (Mono), Musik-Streaming −14 LUFS.'],
  'norm.up':['Wie stark leise Abschnitte höchstens angehoben werden. Zu viel hebt auch das Rauschen in Pausen an.','10–15 dB.'],
  'norm.win':['Wie schnell auf Lautstärkeänderungen reagiert wird. Kurz folgt schneller, kann aber „pumpen“.','3–6 s.'],
+ 'norm.ijx':['Kurze Laute wie „aha“, „mhm“ oder „ja“, während die andere Person spricht, bleiben so leise, wie sie aufgenommen wurden. Ohne diese Option werden sie wie zu leise Sprache kräftig angehoben und stören dann.','An – besonders bei Gesprächen mit mehreren Spuren.'],
  'norm.dc':['Entfernt einen technischen Versatz der Wellenform, den manche Geräte erzeugen. Hört man nicht, schadet aber nie.','An.'],
  'norm.indep':['Linker und rechter Kanal werden getrennt angepasst. Kann das Stereobild verschieben.','Aus.'],
  'norm.lim':['Fängt einzelne zu laute Spitzen weich ab, damit nichts verzerrt.','An.'],
@@ -1683,7 +1689,9 @@ function jumpMark(dir){if(!S.marks.length)return toast('Keine Kapitel');const p=
 function shiftTextDel(a,b){const L=b-a,f=t=>t<=a?t:t>=b?t-L:a;for(const k of TKEYS){for(const it of S[k]){it.a=f(it.a);it.b=f(it.b)}if(k!=='marks')S[k]=S[k].filter(it=>it.b-it.a>.05)}}
 function shiftTextIns(at,len){for(const k of TKEYS)for(const it of S[k]){if(it.a>at+1e-6)it.a+=len;if(it.b>at+1e-6)it.b+=len}}
 /* ---- Emoji-Schnellmarkierungen für Kommentare (Liste anpassbar, gespeichert im Browser) ---- */
-const EMO_DEF=['♥️','❌','❓','💡','✂️','🎉','✏️','📢'];let EMO=lsGet('emojis',EMO_DEF);
+const EMO_DEF=['♥️','❌','❓','💡','✂️','🎉','😂','✏️','📢'];let EMO=lsGet('emojis',EMO_DEF);
+/* Lach-Emoji nachrüsten (Nov 2026): auch in gespeicherten eigenen Listen, sofern Platz ist */
+if(!lsGet('emoMig1',false)){if(!EMO.includes('😂')&&EMO.length<12){const i=EMO.indexOf('🎉');EMO=EMO.slice();EMO.splice(i>=0?i+1:EMO.length,0,'😂');lsSet('emojis',EMO)}lsSet('emoMig1',true)}
 function renderEmo(){const b=$('#ted .emo');b.innerHTML='';
   EMO.forEach((x,i)=>{const k=el('button','',esc(x));k.dataset.tip=`Kommentar als <b>${esc(x)}</b> markieren und speichern<span class="def">${i<9?'Alt+'+(i+1)+' · ':''}Shift+Klick: nur einfügen und weiterschreiben</span>`;
     k.addEventListener('pointerdown',e=>e.preventDefault());k.onclick=e=>emoPick(x,e.shiftKey);b.append(k)});

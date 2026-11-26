@@ -25,6 +25,7 @@
 #pname{font-weight:600;color:#cfcfd6;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;margin:0 6px 0 4px}
 #pname:hover{color:#fff}
 #pname b{color:#f5b942;font-weight:700;margin-left:3px}
+#pname .pnin{font:600 13px Inter,system-ui,sans-serif;color:#fff;background:#1f1f22;border:1px solid #3a3a40;border-radius:8px;padding:3px 8px;width:170px;outline:none}#pname .pnin:focus{border-color:#5b8def}
 #clock{font:600 15px/1 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;color:#e7e7ea;padding:0 8px;min-width:124px;text-align:center;cursor:default}
 #meter{width:150px;height:20px;display:block}
 #main{display:grid;grid-template-columns:1fr var(--sw);min-height:0;position:relative}
@@ -44,7 +45,7 @@
 #mvIns.snap{width:4px;margin-left:-1.5px}
 #mvIns.cancel{background:#8b8b93;box-shadow:none}
 #mvIns.cancel span{background:#3a3a40;color:#e7e7ea}
-#mvBox{position:absolute;display:none;background:#4ade801c;border:1.5px dashed #4ade80cc;border-radius:6px;pointer-events:none;z-index:6}
+#mvBox{position:absolute;display:none;background:#4ade801c;border:1.5px dashed #4ade80cc;border-radius:6px;pointer-events:none;z-index:6;overflow:hidden}.mvGhost{position:absolute;left:0;top:0;pointer-events:none;opacity:.9}
 #mvBox.cancel{display:none!important}
 .tlh{display:flex;align-items:center;gap:2px;padding:0 4px 0 12px;color:#5d5d65;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;border-right:1px solid var(--line)}
 .tlh i{width:6px;height:6px;border-radius:2px;margin-right:6px;flex:none}
@@ -181,6 +182,7 @@ body.sideoff #side{display:none}
 #editChips .er{gap:4px}#editChips .er button{display:inline-flex;align-items:center;gap:6px}#editChips .er button .ic{width:14px;height:14px;flex:none;opacity:.85}
 #hidList{max-height:42vh;overflow:auto;margin:0 -4px;padding:0 4px;scrollbar-width:thin}
 #secTr .trTop{display:flex;gap:4px;align-items:center;margin:0 0 6px}#trQ{flex:1;min-width:0;margin:0}
+#trSp{flex:none;display:flex;align-items:center;justify-content:center;height:32px;width:32px;padding:0;border-radius:999px;color:#8b8b93}#trSp:hover{color:#e7e7ea}#trSp .ic{width:14px;height:14px}
 #trF{flex:none;display:flex;align-items:center;gap:4px;height:32px;min-width:32px;padding:0 9px;border-radius:999px;color:#8b8b93;white-space:nowrap}
 #trF:hover{color:#e7e7ea}#trF.on{background:#1c2a3f;color:#c4d8ff;box-shadow:inset 0 0 0 1px #8ab4ff66}#trF .ic{width:14px;height:14px}#trF .fe{font-size:13px;line-height:1}
 #trList{max-height:48vh;overflow:auto;margin:0 -6px;padding:0 6px;scrollbar-width:thin;overscroll-behavior:contain}
@@ -292,7 +294,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
     <button id="bOpen" class="ib" data-i="open" title="Schnittprojekt öffnen (.aeproj)"></button>
     <button id="bSave" class="ib" data-i="save" title="Schnittprojekt speichern (Strg+S) · Strg+Shift+S: unter neuem Namen"></button>
     <button id="bAuto" class="ib" data-i="autobk" title="Automatische Sicherung" aria-label="Automatische Sicherung"></button>
-    <span id="pname" title="Klick: Projekt speichern unter …"></span>
+    <span id="pname" title="Klick: Projekt umbenennen"></span>
     <span class="vs"></span>
     <div class="seg" id="transport">
       <button id="bStart" data-i="start" title="Zum Anfang (Pos1)"></button>
@@ -364,7 +366,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
         <div class="hint" id="textCounts"></div>
         <div class="chipsrow" style="margin-top:6px"><button id="mCopy" title="Kapitel als Zeitstempel-Liste für Shownotes / YouTube kopieren">Kapitel kopieren</button><button id="tImport" title="SRT, VTT, Audacity-Marken oder Zeitstempel-Liste">Importieren …</button><button id="tExport" title="SRT, VTT, Podcasting-2.0-JSON, Audacity-Marken">Exportieren …</button></div></div>
       <div class="sec" id="secTr"><h4>Transkript <span class="r" id="trCount"></span></h4>
-        <div class="trTop"><input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off"><button id="trF" style="display:none"></button></div>
+        <div class="trTop"><input type="text" id="trQ" placeholder="Im Transkript suchen …" spellcheck="false" autocomplete="off"><button id="trF" style="display:none"></button><button id="trSp" style="display:none"></button></div>
         <div id="trList"></div></div>
       <div class="sec"><h4>Effekte <span class="r">wirken auf die Auswahl · <kbd>Strg+R</kbd> wiederholt</span></h4><div class="fx" id="fxList"></div></div>
       <div class="sec" id="secLog"><h4>Protokoll &amp; Rezepte</h4>
@@ -385,7 +387,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
       <div class="sec" id="secBk"><h4>Sicherung<span class="r bkst"></span></h4>
         <label class="fchk"><input type="checkbox" id="bkOn"> Projekt automatisch sichern</label>
         <div class="fsel"><label>Intervall</label><select id="bkMin"><option value="2">alle 2 Minuten</option><option value="5">alle 5 Minuten</option><option value="10">alle 10 Minuten</option><option value="15">alle 15 Minuten</option><option value="30">alle 30 Minuten</option></select></div>
-        <div class="fsel"><label>Behalten</label><select id="bkKeep"><option value="5">die letzten 5</option><option value="10">die letzten 10</option><option value="20">die letzten 20</option><option value="0">alle</option></select></div>
+        <div class="fsel"><label>Behalten</label><select id="bkKeep"><option value="1">nur die letzte</option><option value="2">die letzten 2</option><option value="3">die letzten 3</option><option value="5">die letzten 5</option><option value="10">die letzten 10</option><option value="20">die letzten 20</option><option value="0">alle</option></select></div>
         <div class="chipsrow" style="margin-top:6px"><button id="bkDirB">Ordner wählen …</button><button id="bkNow">Jetzt sichern</button></div>
         <div class="hint" id="bkInfo" style="margin-top:6px"></div>
         <div class="hint" id="storeInfo" style="margin-top:8px"></div>
@@ -475,6 +477,7 @@ const I={
  dehum:SV('<path d="M1.5 8c1.1-2.8 2.2-2.8 3.3 0s2.2 2.8 3.3 0 2.2-2.8 3.3 0"/><path d="M13.8 3.5v9" stroke-opacity=".55"/>'),
  mouth:SV('<path d="M2 8c2-2.6 4-3.1 6-1.6C10 4.9 12 5.4 14 8c-2 2.6-4 3.6-6 3.6S4 10.6 2 8z"/><path d="M2.3 8h11.4" stroke-opacity=".5"/>'),
  match:SV('<path d="M1.5 5c3 0 4 3 6.5 3s3.5-3 6.5-3"/><path d="M1.5 11c3 0 4-3 6.5-3s3.5 3 6.5 3" stroke-opacity=".55"/>'),
+ refresh:SV('<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/><path d="M12.3 1.8v2.6H9.7"/>'),
  grip:SV('<circle cx="6" cy="4" r=".9"/><circle cx="10" cy="4" r=".9"/><circle cx="6" cy="8" r=".9"/><circle cx="10" cy="8" r=".9"/><circle cx="6" cy="12" r=".9"/><circle cx="10" cy="12" r=".9"/>'),
  cut:SV('<circle cx="4.5" cy="11.5" r="2"/><circle cx="11.5" cy="11.5" r="2"/><path d="M5.8 10 12.3 2.5M10.2 10 3.7 2.5"/>'),
  copy:SV('<rect x="5.5" y="5.5" width="8" height="8" rx="1.6"/><path d="M10.5 5.5V3.9c0-.8-.6-1.4-1.4-1.4H3.9c-.8 0-1.4.6-1.4 1.4v5.2c0 .8.6 1.4 1.4 1.4h1.6"/>'),
@@ -1133,15 +1136,17 @@ async function ummScan(ts,p,onp){const res=[];for(let k=0;k<ts.length;k++){const
     const Fe=await ummFeat(t,i0,i1,f=>onp&&onp((k+f*.95)/ts.length));
     for(const c of ummFind(Fe,p,t.umm)){const[A,B]=ummCut(c,Fe,p);if(B-A>GF()*10)res.push({t,a:t.off+(i0+A)/SR,b:t.off+(i0+B)/SR,core:c.core})}}
   return res}
+/* Spuren synchron halten: alle Spuren mit Audio (gesperrte nur, wenn ausgewählt) */
+const ummSet=ts=>S.tracks.filter(t=>tLen(t)&&(!t.lock||ts.includes(t)));
 async function ummApply(ts,p){setBusy(true,'Suche Ähms …',true);await paintPause();let skip=0;const cuts=[];
   try{const found=await ummScan(ts,p,progress);setBusyLabel('Prüfe andere Spuren …');
-    for(const c of found){const oth=S.sync?syncSet(ts).filter(o=>o!==c.t&&tLen(o)):[];if(await ummClash(c.t,oth,c.a,c.b)){skip++;continue}cuts.push(c)}}
+    for(const c of found){const oth=p.sync?ummSet(ts).filter(o=>o!==c.t):[];if(await ummClash(c.t,oth,c.a,c.b)){skip++;continue}cuts.push(c)}}
   catch(e){setBusy(false);if(e.cancelled)return toast('Ähm-Suche abgebrochen – nichts geändert');console.error(e);return toast('Fehler: '+e.message,4500)}
   setBusy(false);
   if(!cuts.length)return toast(skip?`Nichts ausgeblendet – ${skip} gefunden, aber dort spricht gleichzeitig jemand anderes`:'Keine Ähms gefunden'+(ts.some(t=>!t.umm)?' – Tipp: ein Ähm markieren und „Beispiel aus Auswahl“ wählen':''),5000);
   cuts.sort((x,y)=>x.a-y.a);const M=[];for(const c of cuts){const l=M[M.length-1];if(l&&c.a<=l.b+.01)l.b=Math.max(l.b,c.b);else M.push({...c})}
   stopAll();pushUndo('Ähms entfernen');let sum=0;
-  for(let i=M.length-1;i>=0;i--){const c=M[i],set=(S.sync?syncSet(ts):[c.t]).filter(t=>tLen(t));hideRange(set,c.a,c.b,'umm',(p.fade||0)/1000);sum+=c.b-c.a}
+  for(let i=M.length-1;i>=0;i--){const c=M[i],set=p.sync?ummSet(ts):[c.t];hideRange(set,c.a,c.b,'umm',(p.fade||0)/1000);sum+=c.b-c.a}
   if(hasSel())S.sel.b=Math.max(S.sel.a,S.sel.b-sum);S.lastFx='umm';changed(true);
   toast(`${M.length} ${M.length===1?'Ähm':'Ähms'} ausgeblendet · ${nf(sum,1)} s${skip?` · ${skip} übersprungen (jemand spricht gleichzeitig)`:''} – über „Ausgeblendete Passagen“ zurückholbar`,6000)}
 async function ummPreview(ts,p){setBusy(true,'Suche Ähms …',true);await paintPause();
@@ -1376,13 +1381,13 @@ const FX=[
  desc:'Findet „Ähm“ und „Äh“ am Klang (keine KI) und blendet sie aus – jederzeit zurückholbar über die gelben Markierungen oder „Ausgeblendete Passagen“. Genauer wird es, wenn du pro Spur ein Ähm markierst und „Beispiel aus Auswahl“ klickst.',
  params:[{k:'mode',l:'Suche',type:'sel',opts:[['safe','Vorsichtig'],['more','Gründlich']],def:'safe'},
   {k:'min',l:'Mindestlänge',min:.15,max:.6,step:.05,def:.25,u:'s'},{k:'max',l:'Höchstlänge',min:.6,max:2,step:.1,def:1.4,u:'s'},{k:'pause',l:'Pausen rund ums Ähm mitkürzen',type:'chk',def:true},
-  {k:'fade',l:'Übergang weich blenden',min:0,max:300,step:10,def:40,fmt:v=>v>0?Math.round(v)+' ms':'aus'}],
+  {k:'sync',l:'Spuren synchron halten (empfohlen)',type:'chk',def:true},{k:'fade',l:'Übergang weich blenden',min:0,max:300,step:10,def:40,fmt:v=>v>0?Math.round(v)+' ms':'aus'}],
  extra(pn){const r=el('div','chipsrow');r.style.margin='8px 0 0';const a=el('button','','Beispiel aus Auswahl');a.dataset.tip=tipHtml('umm.learn');a.onclick=ummLearn;
    const b=el('button','','Beispiel löschen');b.title='Gespeichertes Beispiel-Ähm der ausgewählten Spur verwerfen';b.onclick=ummForget;r.append(a,b);pn.append(r)},
  info(ts){const t=ts[0],[i0,i1]=trackRange(t),P={...FXP.umm},ex=ts.filter(x=>x.umm).map(x=>esc(x.name));
    const r=memoAsync(t,`umm${P.mode}/${P.min}/${P.max}/${P.pause}/${t.umm?t.umm.at:0}`,i0,i1,async()=>ummFind(await ummFeat(t,i0,i1),P,t.umm).length);
    return (r==null?'<span class="hint">Suche Ähms …</span>':`Findet <b>${r}</b> ${r===1?'Ähm':'Ähms'}${ts.length>1?' (erste Spur)':''}`)+'<br>'+
-     (ex.length?`Beispiel-Ähm: <b>${ex.join(', ')}</b>`:'<span class="hint">Kein Beispiel-Ähm – Tipp: eins markieren und „Beispiel aus Auswahl“</span>')+(S.sync&&S.tracks.length>1?'<br>Sync an: andere Spuren werden mitgekürzt, außer dort spricht gerade jemand':'')+'<br>'+scopeTxt(ts)},
+     (ex.length?`Beispiel-Ähm: <b>${ex.join(', ')}</b>`:'<span class="hint">Kein Beispiel-Ähm – Tipp: eins markieren und „Beispiel aus Auswahl“</span>')+(S.tracks.length>1?(P.sync?'<br>Andere Spuren werden mitgekürzt (bleiben synchron) – außer dort spricht gerade jemand':'<br><span class="warn">Nur diese Spur wird gekürzt – die anderen verrutschen zeitlich</span>'):'')+'<br>'+scopeTxt(ts)},
  lenChange:true,apply:ummApply,preview:ummPreview,pvTip:'Alle gefundenen Stellen (bis zu 12) hintereinander anhören – genau das würde ausgeblendet'},
 {id:'trunc',name:'Stille kürzen',icon:'trunc',desc:'Kürzt lange Pausen – z. B. für Podcasts. Mit „Sync“ werden alle Spuren gemeinsam gekürzt.',
  params:[{k:'thr',l:'Schwelle',min:-70,max:-20,step:1,def:-45,u:'dB'},{k:'min',l:'Pausen ab',min:.2,max:5,step:.1,def:.8,u:'s'},{k:'keep',l:'Kürzen auf',min:0,max:2,step:.05,def:.4,u:'s'}],
@@ -1481,6 +1486,7 @@ const TIPS={
  'umm.min':['So lang muss der gleichbleibende Laut mindestens sein. Kürzer = findet auch kurze „Äh“, aber eher mal ein normales Wort.','0,25 s (0,2–0,35 s).'],
  'umm.max':['Längere Laute werden nicht als Ähm gezählt – schützt z. B. gesungene oder sehr lang gezogene Wörter.','1,4 s.'],
  'umm.pause':['Steht das Ähm zwischen zwei Pausen, bleiben nach dem Entfernen sonst beide Pausen hintereinander stehen – das klingt nach einem Loch. An: es bleibt ungefähr nur die längere der beiden Pausen.','An.'],
+ 'umm.sync':['Wird ein Ähm herausgeschnitten, wird die Spur an dieser Stelle kürzer. An: Die anderen Spuren werden an genau derselben Stelle mitgekürzt, damit alles zeitlich zusammenpasst. Spricht dort gerade jemand anderes, bleibt das Ähm stehen. Aus: Nur diese Spur wird gekürzt – die anderen laufen danach zeitversetzt.','An – außer du bearbeitest bewusst nur eine einzelne Spur.'],
  'umm.fade':['Setzt an jeder Schnittstelle Punkte auf die Hüllkurve: kurz vor dem Schnitt leiser werden, danach wieder lauter. So gibt es kein Knacken und keinen harten Übergang. Die Punkte kannst du im Hüllkurven-Modus (H) nachträglich verschieben; holst du ein Ähm zurück, verschwinden sie wieder. 0 = aus.','40 ms (20–80 ms). Länger klingt weicher, verschluckt aber eher den Anfang oder das Ende eines Wortes.'],
  'umm.learn':['Markiere in einer Spur genau ein Ähm und klicke hier. Der Editor merkt sich Klangfarbe und Tonhöhe dieser Stimme und erkennt deren Ähms danach zuverlässiger – und verwechselt sie seltener mit Wörtern. Gilt für jede ausgewählte Spur einzeln und wird mit der Sitzung gespeichert.','Pro Sprecher ein typisches, deutliches Ähm.'],
  trunc:['Findet lange Pausen und kürzt sie. Die Aufnahme wird kürzer und wirkt flüssiger. Anders als „Pausen absenken“ schneidet es Zeit heraus.','Mit „Sync“ an, damit alle Spuren gleich gekürzt werden.'],
@@ -1597,6 +1603,7 @@ const SPKL=new WeakMap(),SPK=new Map(),SEQID=new WeakMap();let SEQN=0;
 const seqId=q=>{let v=SEQID.get(q);if(!v)SEQID.set(q,v=++SEQN);return v};
 function spkLevels(t){const k=t.ch[0];if(SPKL.has(k))return SPKL.get(k);SPKL.set(k,null);
   frameLevels(t.ch,0,tLen(t)).then(L=>{SPKL.set(k,{L,st:levelStats(L)});drawLanes();renderTranscript()},()=>SPKL.delete(k));return null}
+function spkRecalc(){SPK.clear();for(const t of S.tracks)if(t.ch[0])SPKL.delete(t.ch[0]);drawLanes();renderTranscript(true);toast('Sprecherfarben werden neu berechnet …',2200)}
 function subSpeaker(it){const ts=S.tracks.filter(t=>tLen(t)&&!t.rec);if(ts.length<2)return null;
   const key=it.a+':'+it.b+':'+ts.map(t=>t.id+'@'+t.off+'#'+seqId(t.ch[0])).join(','),c=SPK.get(it.id);if(c&&c.k===key)return c.t;
   const fps=SR/GF();let best=null,bs=0;
@@ -1656,7 +1663,7 @@ function laneHover(l,e){if(e.buttons)return;const cv=e.currentTarget,x=e.clientX
   else cv.title=l.point?'Doppelklick: Kapitel hier setzen':`Ziehen: ${l.one} für einen Bereich anlegen · Doppelklick: neu`;cv.style.cursor=c}
 function laneCtx(l,e){e.preventDefault();const cv=e.currentTarget,x=e.clientX-cv.getBoundingClientRect().left,t=Math.max(0,xToTime(x)),it=tHit(l,x);
   if(it){S.tsel={key:l.key,id:it.id};touchT();invalidate();ctxMenu(e.clientX,e.clientY,[['Text bearbeiten',()=>startEdit(l.key,it),'Doppelklick'],l.point?['Hierhin springen',()=>moveCur(it.a)]:['Bereich auswählen',()=>selectRange(it.a,it.b)],l.point?null:['Abspielen',()=>play(it.a,it.b)],'-',[l.one+' löschen',()=>delText(l.key,it.id),'Entf']].filter(Boolean))}
-  else ctxMenu(e.clientX,e.clientY,[[l.one+' hier einfügen',()=>l.point?quickAdd(l.key,t):addText(l.key,t,t+(l.key==='subs'?2.5:3),'',true)],hasSel()&&!l.point?[l.one+' für die Auswahl',()=>addText(l.key,S.sel.a,S.sel.b,'',true)]:null,'-',['Spur ausblenden',()=>toggleLane(l.key,false)]].filter(Boolean))}
+  else ctxMenu(e.clientX,e.clientY,[[l.one+' hier einfügen',()=>l.point?quickAdd(l.key,t):addText(l.key,t,t+(l.key==='subs'?2.5:3),'',true)],hasSel()&&!l.point?[l.one+' für die Auswahl',()=>addText(l.key,S.sel.a,S.sel.b,'',true)]:null,l.key==='subs'&&S.subs.length?['Sprecherfarben neu berechnen',spkRecalc]:null,'-',['Spur ausblenden',()=>toggleLane(l.key,false)]].filter(Boolean))}
 function addText(key,a,b,text,edit){const l=TLM[key];a=Math.max(0,a);if(l.point){b=a;if(S[key].some(m=>Math.abs(m.a-a)<.05)){toast('Hier ist schon ein Kapitel');return null}}
   pushUndo(l.one);const it={id:MID++,a,b:Math.max(a,b),text:text??(l.point?'Kapitel '+(S[key].length+1):'')};S[key].push(it);sortT(key);S.tsel={key,id:it.id};touchT();
   if(!S.lanesOn[key]){S.lanesOn[key]=true;lsSet('lanes',S.lanesOn);renderLanes()}changedText();if(edit)startEdit(key,it,true);else if(l.point)toast(`${it.text} gesetzt bei ${fmtChap(a)}`);return it}
@@ -1726,6 +1733,7 @@ function renderTranscript(force){const box=$('#trList');if(!box)return;const q=(
   const EMO_SHOW=new Map(),emoOf=x=>{const out=new Set(),add=str=>{let any=false;for(const m of (str||'').match(EMO_RE)||[]){const k=emoKey(m);if(!EMO_SHOW.has(k))EMO_SHOW.set(k,m);out.add(k);any=true}return any};
     for(const n of S.notes)if(n.b>x.a&&n.a<x.b&&!add(n.text)){out.add('💬');EMO_SHOW.set('💬','💬')}add(x.text);return out},cnt=new Map(),per=new Map();
   for(const x of subs){const e=emoOf(x);per.set(x.id,e);for(const m of e)cnt.set(m,(cnt.get(m)||0)+1)}
+  {const sb=$('#trSp');sb.style.display=multi?'':'none';sb.innerHTML=I.refresh;sb.dataset.tip='Sprecherfarben neu berechnen – z. B. nach dem Verschieben oder Bearbeiten von Spuren';sb.onclick=spkRecalc}
   if(TRF&&!cnt.has(TRF))TRF=null;const fb=$('#trF');fb.classList.toggle('on',!!TRF);fb.style.display=cnt.size?'':'none';fb.innerHTML=I.filter+(TRF?`<span class="fe">${esc(EMO_SHOW.get(TRF)||TRF)}</span>`:'');
   fb.dataset.tip=TRF?`Gefiltert: nur Zeilen mit <b>${esc(EMO_SHOW.get(TRF)||TRF)}</b> – klicken zum Ändern`:'Nach Emoji filtern';
   const order=[...EMO,'💬'].map(emoKey),rank=k=>{const i=order.indexOf(k);return i<0?99:i};
@@ -2139,15 +2147,23 @@ function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b
   const trackAt=y=>{let lr=null;for(const x of S.tracks){const rr=ROWS.get(x.id);if(!rr)continue;const q=rr.row.getBoundingClientRect();if(y>=q.top&&y<q.bottom)return{t:x,q};lr=q}return lr&&y>=lr.bottom?{t:'new',q:{top:lr.bottom,bottom:lr.bottom+64}}:null};
   const ins=$('#mvIns'),box=$('#mvBox'),lbl=$('span',ins),cr=$('#center').getBoundingClientRect();let top=1e9,bot=0;
   for(const x of aff){const rr=ROWS.get(x.id);if(!rr)continue;const q=rr.row.getBoundingClientRect();top=Math.min(top,q.top-cr.top);bot=Math.max(bot,q.bottom-cr.top)}
-  let moved=false,cancelled=false,last=null,saved=null,own=null;S.focus=t.id;
+  let moved=false,cancelled=false,last=null,saved=null,own=null,ghost=null;S.focus=t.id;
+  /* Wellenform der Passage als Bild (vor dem Herausnehmen gezeichnet) – wandert im Rahmen mit */
+  const mkGhost=()=>{if(ghost)return;const W=Math.max(1,Math.min(8000,Math.round(L*S.view.pps))),d=devicePixelRatio||1,H=Math.max(10,bot-top);ghost=el('canvas','mvGhost');ghost.width=Math.round(W*d);ghost.height=Math.round(H*d);ghost.style.width=W+'px';ghost.style.height=H+'px';
+    const g=ghost.getContext('2d');g.scale(d,d);for(const x of aff){const rr=ROWS.get(x.id);if(!rr||!tLen(x))continue;const q=rr.row.getBoundingClientRect(),y0=q.top-cr.top-top,h=q.height,mid=y0+h/2,amp=h*.42,n=tLen(x);
+      const i0=Math.round((a-x.off)*SR),i1=Math.round((b-x.off)*SR),j0=clamp(i0,0,n),j1=clamp(i1,0,n);if(j1<=j0)continue;const arr=x.ch.map(c=>c.slice(j0,j1)),spp=(i1-i0)/W,st=Math.max(1,Math.floor(spp/48));g.fillStyle=(x.color||'#5b8def')+'d0';
+      for(let px=0;px<W;px++){const k0=Math.floor(px*spp)+i0-j0,k1=Math.floor((px+1)*spp)+i0-j0;let mn=0,mx=0;for(const c of arr)for(let k=Math.max(0,k0);k<Math.min(c.length,Math.max(k0+1,k1));k+=st){const v=c[k];if(v<mn)mn=v;if(v>mx)mx=v}
+        if(mx-mn>1e-4)g.fillRect(px,mid-Math.min(1,mx)*amp,1,Math.max(1,(Math.min(1,mx)-Math.max(-1,mn))*amp))}
+      g.fillStyle=(x.color||'#5b8def')+'55';g.fillRect(0,mid-.5,W,1)}box.append(ghost)};
   const collapse=()=>{if(saved)return;saved=aff.map(x=>({x,ch:x.ch,cuts:x.cuts,env:x.env,off:x.off}));for(const x of aff)removeTime(x,a,b);own=mkSnap(aff);S.dragMv=true;for(const x of aff)invalidateTrack(x)};
   const restore=()=>{if(saved)for(const o of saved){o.x.ch=o.ch;o.x.cuts=o.cuts;o.x.env=o.env;o.x.off=o.off}saved=null;S.dragMv=false};
   const place=()=>{if(!last)return;const{P,cancel,dst}=last,xp=timeToX(P),w=waveW();ins.classList.toggle('cancel',cancel);box.classList.toggle('cancel',cancel);
     ins.style.display=xp>=-2&&xp<=w+2?'block':'none';ins.style.left=(HW+xp)+'px';ins.classList.toggle('snap',!!last.snap);
     lbl.textContent=cancel?'↩ Loslassen = abbrechen':(dst==='new'?'▼ Neue Spur · ':dst?'▼ In „'+dst.name+'“'+(last.snap==='cut'?' am Schnitt':'')+' · ':last.snap==='cut'?'▼ Am Schnitt · ':'▼ Anfang bei ')+(cancel?'':fmtT(P));
-    const bx=clamp(xp,0,w),bw=clamp(xp+L*S.view.pps,0,w)-bx;box.style.display=bw>1?'block':'none';box.style.left=(HW+bx)+'px';box.style.width=bw+'px';box.style.top=(last.top+2)+'px';box.style.height=Math.max(10,last.bot-last.top-4)+'px';box.classList.toggle('xtrk',!!dst)};
+    const bx=clamp(xp,0,w),bw=clamp(xp+L*S.view.pps,0,w)-bx;box.style.display=bw>1?'block':'none';box.style.left=(HW+bx)+'px';box.style.width=bw+'px';box.style.top=(last.top+2)+'px';box.style.height=Math.max(10,last.bot-last.top-4)+'px';box.classList.toggle('xtrk',!!dst);
+    if(ghost){ghost.style.left=(xp-bx-1.5)+'px';ghost.style.top=(-3.5)+'px';ghost.style.height=(dst?Math.max(10,last.bot-last.top):Math.max(10,bot-top))+'px'}};
   const mv=ev=>{if(cancelled)return;if(!moved&&Math.abs(ev.clientX-sx)<4&&(sy==null||Math.abs(ev.clientY-sy)<6))return;
-    if(!moved){moved=true;stopAll();document.body.classList.add('panning');collapse()}
+    if(!moved){moved=true;stopAll();document.body.classList.add('panning');mkGhost();collapse()}
     let dst=null,dq=null;if(canX){const h=trackAt(ev.clientY);if(h&&h.t!==src){dst=h.t;dq=h.q}}
     if(dst){if(saved){restore();S.dragMv=true;for(const x of aff)invalidateTrack(x)}}else if(!saved)collapse();/* Lücken-Vorschau nur innerhalb der Spur */
     const P0=Math.max(0,xToTime(ev.clientX-left)-grab);let P=P0,snap=null;
@@ -2156,7 +2172,7 @@ function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b
     last={P,cancel:noop,snap,dst,top:dq?dq.top-cr.top:top,bot:dq?dq.bottom-cr.top:bot};
     setStatus(noop?'Loslassen lässt die Passage an ihrem Platz':(dst==='new'?'In eine neue Spur · Anfang bei ':dst?'In „'+dst.name+'“ · Anfang bei ':'Anfang bei ')+fmtT(P)+(snap?' (eingerastet)':'')+' · Shift: ohne Magnet · Esc: abbrechen'+(canX&&!dst?' · auf andere Spur ziehen: dorthin verschieben':''));
     const x=ev.clientX-left,w=tw.clientWidth;if(x<0||x>w){S.view.t0+=(x<0?x:x-w)/S.view.pps*.2;clampView();invalidate()}place()};
-  const hide=()=>{ins.style.display='none';box.style.display='none'};
+  const hide=()=>{ins.style.display='none';box.style.display='none';if(ghost){ghost.remove();ghost=null}};
   const fin=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);document.removeEventListener('keydown',esc,true);document.body.classList.remove('panning');hide();showSnap(null);S.mv=null;restore();setStatus('Bereit')};
   const esc=e=>{e.preventDefault();e.stopPropagation();if(e.key==='Escape'){cancelled=true;fin();for(const x of aff)invalidateTrack(x);invalidate();toast('Verschieben abgebrochen')}};/* während des Ziehens keine anderen Tasten */
   const up=()=>{if(cancelled)return;fin();
@@ -2449,7 +2465,13 @@ async function doExport(o){lsSet('export',{fmt:o.fmt,tr:o.tr,ch:String(o.ch),sr:
 /* ============================== Schnittprojekt (.aeproj) ==============================
    Aufbau: "AEPROJ01" · uint32 JSON-Länge · 4 Byte frei · JSON (Spuren, Kanten, Hüllkurven, Texte …) · auf 4 Byte aufgefüllt · rohe Float32-Audiodaten (verlustfrei) */
 const PMAGIC='AEPROJ01';
-function updTitle(){const n=S.projName||'Unbenannt';$('#pname').innerHTML=esc(n)+(S.dirty&&S.tracks.length?'<b title="Ungespeicherte Änderungen">•</b>':'');document.title=(S.dirty&&S.tracks.length?'• ':'')+n+' – Podcast Editor'}
+/* Projektname direkt in der Leiste umbenennen (Enter = übernehmen, Esc = abbrechen) */
+function renameProject(){const pn=$('#pname');if(pn.querySelector('input'))return;const old=S.projName||'';const inp=el('input','pnin');inp.type='text';inp.value=old||'';inp.placeholder='Projektname';inp.spellcheck=false;
+  pn.innerHTML='';pn.append(inp);inp.focus();inp.select();let done=false;
+  const fin=ok=>{if(done)return;done=true;const v=inp.value.replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim();
+    if(ok&&v!==old){S.projName=v;lsSet('exName',v);if(S.tracks.length){S.dirty=true;scheduleSave()}toast(v?(S.projHandle?`Umbenannt in „${v}“ – die gespeicherte Datei behält ihren Namen, bis du „Speichern unter“ wählst`:`Projekt heißt jetzt „${v}“`):'Name zurückgesetzt',S.projHandle?4500:2200)}inp.remove();updTitle()};
+  inp.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')fin(true);else if(e.key==='Escape')fin(false)};inp.onblur=()=>fin(true);inp.onclick=e=>e.stopPropagation()}
+function updTitle(){const n=S.projName||'Unbenannt';if($('#pname input'))return;$('#pname').innerHTML=esc(n)+(S.dirty&&S.tracks.length?'<b title="Ungespeicherte Änderungen">•</b>':'');document.title=(S.dirty&&S.tracks.length?'• ':'')+n+' – Podcast Editor'}
 /* Projektdatei stückweise schreiben (Kopf, dann jeden Block) – nie das ganze Projekt auf einmal im Speicher */
 async function writeProject(write,onp){const order=[],tracks=[];let off=0;
   for(const t of S.tracks){tracks.push({id:t.id,name:t.name,off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h,cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,umm:t.umm||null,clr:t.clr||[],ch:t.ch.map(s=>{const o={o:off,n:s.length};off+=s.length*4;order.push(s);return o}),
@@ -2742,6 +2764,8 @@ window.addEventListener('dragover',e=>e.preventDefault());
 window.addEventListener('drop',e=>{e.preventDefault();dragN=0;document.body.classList.remove('drag');importFiles(e.dataTransfer.files)});
 
 /* ============================== Tastatur ============================== */
+/* Nach einer Auswahl in einem Dropdown den Fokus abgeben – sonst schluckt das Dropdown Leertaste & Tastenkürzel */
+document.addEventListener('change',e=>{if(e.target instanceof HTMLSelectElement&&!e.target.closest('#modal'))setTimeout(()=>e.target.blur(),0)},true);
 document.addEventListener('keydown',e=>{const tg=e.target instanceof Element?e.target:document.body;
   if(tg.matches('input[type=text],input[type=number],textarea,select')||tg.isContentEditable)return;
   if((e.ctrlKey||e.metaKey)&&/^[ca]$/i.test(e.key)&&trHasSel())return;/* Text im Transkript kopieren */
@@ -2780,7 +2804,7 @@ $$('[data-i]').forEach(e=>e.insertAdjacentHTML('afterbegin',I[e.dataset.i]));
 $('#bImport').onclick=$('#wImport').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{importFiles(e.target.files);e.target.value=''};
 $('#bNew').onclick=newProject;$('#bPlay').onclick=togglePlay;$('#bPause').onclick=togglePause;$('#bStop').onclick=()=>{if(R.starting)R.cancel=true;else if(R.on)stopRec();else stopAll()};
-$('#bAuto').onclick=toggleAutoBk;$('#bOpen').onclick=openProjectPicker;$('#bSave').onclick=()=>saveProject(false);$('#pname').onclick=()=>saveProject(true);$('#bEnv').onclick=toggleEnv;
+$('#bAuto').onclick=toggleAutoBk;$('#bOpen').onclick=openProjectPicker;$('#bSave').onclick=()=>saveProject(false);$('#pname').onclick=renameProject;$('#bEnv').onclick=toggleEnv;
 $('#bRec').onclick=$('#wRec').onclick=toggleRec;$('#wEmpty').onclick=()=>{addTrack();toast('Leeres Projekt – jetzt aufnehmen (R), Dateien hineinziehen, einfügen (Strg+V) oder Kapitel/Untertitel anlegen',5000)};$('#bStart').onclick=()=>moveCur(0);$('#bEnd').onclick=()=>moveCur(projDur());
 $('#bLoop').onclick=()=>{S.loop=!S.loop;updTransport()};$('#bSync').onclick=toggleSync;$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;
 $('#bZIn').onclick=()=>zoomAt(1.6);$('#bZOut').onclick=()=>zoomAt(1/1.6);$('#bFit').onclick=fit;$('#bZSel').onclick=zoomSel;$('#bHelp').onclick=showHelp;$('#bExport').onclick=openExport;$('#bAddTrack').onclick=addTrack;

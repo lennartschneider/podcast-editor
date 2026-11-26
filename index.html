@@ -2184,8 +2184,8 @@ function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b
       for(let px=0;px<W;px++){const k0=Math.floor(px*spp)+i0-j0,k1=Math.floor((px+1)*spp)+i0-j0;let mn=0,mx=0;for(const c of arr)for(let k=Math.max(0,k0);k<Math.min(c.length,Math.max(k0+1,k1));k+=st){const v=c[k];if(v<mn)mn=v;if(v>mx)mx=v}
         if(mx-mn>1e-4)g.fillRect(px,mid-Math.min(1,mx)*amp,1,Math.max(1,(Math.min(1,mx)-Math.max(-1,mn))*amp))}
       g.fillStyle=(x.color||'#5b8def')+'55';g.fillRect(0,mid-.5,W,1)}box.append(ghost)};
-  const collapse=()=>{if(saved)return;saved=aff.map(x=>({x,ch:x.ch,cuts:x.cuts,env:x.env,off:x.off}));for(const x of aff)removeTime(x,a,b);own=mkSnap(aff);S.dragMv=true;for(const x of aff)invalidateTrack(x)};
-  const restore=()=>{if(saved)for(const o of saved){o.x.ch=o.ch;o.x.cuts=o.cuts;o.x.env=o.env;o.x.off=o.off}saved=null;S.dragMv=false};
+  const collapse=()=>{if(saved)return;saved=aff.map(x=>({x,ch:x.ch,cuts:x.cuts,env:x.env,off:x.off,hid:x.hid,clr:x.clr}));/* hid/clr mitsichern: removeTime schiebt sie sonst dauerhaft an den Passagenanfang */for(const x of aff)removeTime(x,a,b);own=mkSnap(aff);S.dragMv=true;for(const x of aff)invalidateTrack(x)};
+  const restore=()=>{if(saved)for(const o of saved){o.x.ch=o.ch;o.x.cuts=o.cuts;o.x.env=o.env;o.x.off=o.off;o.x.hid=o.hid;o.x.clr=o.clr}saved=null;S.dragMv=false};
   const place=()=>{if(!last)return;const{P,cancel,dst}=last,xp=timeToX(P),w=waveW();ins.classList.toggle('cancel',cancel);box.classList.toggle('cancel',cancel);
     ins.style.display=xp>=-2&&xp<=w+2?'block':'none';ins.style.left=(HW+xp)+'px';ins.classList.toggle('snap',!!last.snap);
     lbl.textContent=cancel?'↩ Loslassen = abbrechen':(dst==='new'?'▼ Neue Spur · ':dst?'▼ In „'+dst.name+'“'+(last.snap==='cut'?' am Schnitt':'')+' · ':last.snap==='cut'?'▼ Am Schnitt · ':'▼ Anfang bei ')+(cancel?'':fmtT(P));

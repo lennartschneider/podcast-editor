@@ -818,6 +818,12 @@ function stopPlay(){clearInterval(P.feedT);for(const n of P.nodes){for(const s o
 function stopAll(){stopPlay();stopPreview();P.paused=null;updTransport();updPhead()}
 /* Bearbeiten während der Wiedergabe: anhalten, bearbeiten, danach an derselben Stelle weiterspielen.
    Wird Zeit herausgeschnitten oder eingefügt, rückt die Abspielposition mit (siehe removeTime/insertAt/insertSilence). */
+/* Hüllkurve geändert (Stumm schalten, Punkte, Zurücksetzen): laufende Wiedergabe NICHT neu starten,
+   sondern nur die Lautstärke-Automation ab jetzt neu planen – kein Aussetzer, weich in 30 ms übergeblendet */
+function envLive(){if(!P.on||R.on)return;const now=AC.currentTime;
+  for(const n of P.nodes){const g=n.c.e.gain,cs=Math.max(now+.03,n.t0),ls=n.local+(cs-n.t0),end=n.s1/SR;
+    try{if(g.cancelAndHoldAtTime)g.cancelAndHoldAtTime(now);else{const v=g.value;g.cancelScheduledValues(now);g.setValueAtTime(v,now)}}catch{}
+    if(ls<end)schedEnv(g,n.t,ls,cs,end-ls,true)}}
 function editStop(){if(P.on&&!R.on)S.resume={t:pos(),to:P.to>=projDur()-.02?null:P.to,loop:P.loop,loopFrom:P.loopFrom,adj:new Set()};stopAll()}
 function editResume(){const r=S.resume;if(!r||S.busy)return;S.resume=null;if(P.on||R.on)return;const d=projDur();if(r.t>=d-.05)return;play(r.t,r.to!=null&&r.to>r.t?r.to:null,r.loop,r.loop?Math.min(r.loopFrom,r.t):null)}
 function resumeShift(key,f){const r=S.resume;if(!r||r.adj.has(key))return;r.adj.add(key);r.t=Math.max(0,f(r.t));if(r.to!=null)r.to=f(r.to);if(r.loopFrom!=null)r.loopFrom=f(r.loopFrom)}
@@ -1972,9 +1978,9 @@ function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage
 /* Stille: Hüllkurve in der Markierung auf stumm setzen (zerstörungsfrei, kurze Rampen gegen Knacken) – rückgängig per Hüllkurve oder Strg+Z */
 function envSilenceRange(t,a,b){const len=tLen(t)/SR;a=clamp(a,0,len);b=clamp(b,0,len);if(b-a<.002)return false;const r=Math.min(.005,(b-a)/4),va=envDbAt(t,a),vb=envDbAt(t,b),out=(t.env||[]).filter(q=>q.t<a-1e-6||q.t>b+1e-6);
   out.push({t:a,db:Math.round(va*10)/10},{t:a+r,db:ENV_MIN},{t:b-r,db:ENV_MIN},{t:b,db:Math.round(vb*10)/10});out.sort((x,y)=>x.t-y.t);t.env=out;logEnv(t);return true}
-function opSilence(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');editStop();pushUndo('Stille');let n=0;
+function opSilence(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');pushUndo('Stille');let n=0;
   for(const t of ts)if(envSilenceRange(t,S.sel.a-t.off,S.sel.b-t.off))n++;if(!n){S.undo.pop();return toast('Die Markierung liegt außerhalb des Audios')}
-  changed();toast('Markierung stumm (Hüllkurve) – mit „Hüllkurve zurücksetzen“ wieder hörbar',3500)}
+  changed();envLive();toast('Markierung stumm (Hüllkurve) – mit „Hüllkurve zurücksetzen“ wieder hörbar',3500)}
 function opTrim(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst den Bereich auswählen, der bleiben soll');editStop();pushUndo('Zuschneiden');logOp(ts,{k:'trim',a:S.sel.a,b:S.sel.b});
   for(const t of ts){const[i0,i1]=trackRange(t),off0=t.off;t.ch=t.ch.map(s=>s.sub(i0,i1));t.off+=i0/SR;remapCuts(t,off0,x=>x)}changed()}
 function opDup(){if(!editable())return;const ts=targets();if(!ts)return;editStop();pushUndo('Duplizieren');
@@ -2007,8 +2013,8 @@ let ENVMID=lsGet('envMid',true);/* Hüllkurve nur bis zur Mittellinie – übera
 const ENV_PT=8,ENV_PB=14,envH=h=>Math.max(10,ENVMID?h/2-ENV_PT:h-ENV_PT-ENV_PB);
 const envY=(db,h)=>ENV_PT+envH(h)*(1-(clamp(db,ENV_MIN,ENV_MAX)-ENV_MIN)/(ENV_MAX-ENV_MIN));
 function envDb(y,h){let v=(1-(y-ENV_PT)/envH(h))*(ENV_MAX-ENV_MIN)+ENV_MIN;if(Math.abs(v)<.8)v=0;return Math.round(clamp(v,ENV_MIN,ENV_MAX)*10)/10}
-function schedEnv(param,t,ls,cs,dur){const e=t.env;if(!e||!e.length){param.value=1;return}const T=lt=>cs+(lt-ls),lt0=Math.max(ls,0),end=ls+dur;
-  param.setValueAtTime(envAt(t,lt0),T(lt0));let cur=lt0;const pts=e.map(p=>p.t).filter(x=>x>lt0&&x<end);pts.push(end);
+function schedEnv(param,t,ls,cs,dur,glide){const e=t.env;if(!e||!e.length){if(glide)param.linearRampToValueAtTime(1,cs);else param.value=1;return}const T=lt=>cs+(lt-ls),lt0=Math.max(ls,0),end=ls+dur;
+  if(glide)param.linearRampToValueAtTime(envAt(t,lt0),T(lt0));else param.setValueAtTime(envAt(t,lt0),T(lt0));let cur=lt0;const pts=e.map(p=>p.t).filter(x=>x>lt0&&x<end);pts.push(end);
   for(const nx of pts){if(nx<=cur)continue;const d0=envDbAt(t,cur),d1=envDbAt(t,nx);
     if(Math.abs(d1-d0)>.05){const st=Math.min(64,Math.max(1,Math.ceil((nx-cur)/.04)));for(let k=1;k<=st;k++){const lt=cur+(nx-cur)*k/st;param.linearRampToValueAtTime(envAt(t,lt),T(lt))}}
     else param.setValueAtTime(envGain(d1),T(nx));cur=nx}}
@@ -2021,7 +2027,7 @@ function drawEnv(t,g,w,h,d,X,n){const has=t.env&&t.env.length;if((!S.envMode&&!h
     if(act){g.font=`600 ${11*d}px Inter,system-ui,sans-serif`;g.fillStyle='#fff';g.fillText(fmtDb(p.db)+' dB',x+8*d,Math.max(12*d,y-7*d))}}
   g.restore()}
 function envNear(t,x,y,h){let best=null,bd=81;for(const p of t.env||[]){const dx=timeToX(t.off+p.t)-x,dy=envY(p.db,h)-y,d=dx*dx+dy*dy;if(d<=bd){bd=d;best=p}}return best}/* nächster Punkt im Umkreis von 9 px */
-function envChanged(t){t.env=t.env.slice().sort((p,q)=>p.t-q.t);logEnv(t);S.envDrag=null;if(P.on&&!R.on)play(pos(),P.to,P.loop,P.loopFrom);changed()}
+function envChanged(t){t.env=t.env.slice().sort((p,q)=>p.t-q.t);logEnv(t);S.envDrag=null;changed();envLive()}
 function envDown(e,t,tw){if(!tLen(t))return;const r=tw.getBoundingClientRect(),H=r.height,x=e.clientX-r.left,y=e.clientY-r.top,tm=xToTime(x),len=tLen(t)/SR,near=envNear(t,x,y,H),sy=e.clientY,sx=e.clientX;S.focus=t.id;
   const dbl=!!near&&!e.shiftKey&&(e.altKey||dblCheck(e,'env'+t.id));/* nur EINMAL prüfen – ein zweiter Aufruf hielte denselben Klick für einen Doppelklick */
   if(dbl&&near.sel&&envSelN()>1){envDelSel();return}
@@ -2093,8 +2099,8 @@ function envClearRange(t,a,b){const len=tLen(t)/SR;a=clamp(a,0,len);b=clamp(b,0,
 const envSelN=()=>S.tracks.reduce((n,t)=>n+(t.env||[]).filter(q=>q.sel).length,0);
 function envSelClear(){let n=0;for(const t of S.tracks)for(const q of t.env||[])if(q.sel){delete q.sel;n++}if(n){invalidate();setStatus('Bereit')}}
 function envSelectAll(){const t=byId(S.focus)||S.tracks.find(x=>x.sel);if(!t||!(t.env||[]).length)return toast('Diese Spur hat keine Hüllkurvenpunkte');envSelClear();t.env.forEach(q=>q.sel=true);invalidate();setStatus(t.env.length+' Punkte ausgewählt · ziehen = verschieben · Entf = löschen · Esc = Auswahl aufheben')}
-function envDelSel(){const ts=S.tracks.filter(t=>(t.env||[]).some(q=>q.sel));if(!ts.length)return false;editStop();pushUndo('Hüllkurvenpunkte löschen');let n=0;
-  for(const t of ts){const k=t.env.length;t.env=t.env.filter(q=>!q.sel);n+=k-t.env.length;logEnv(t)}if(P.on)play(pos(),P.to,P.loop,P.loopFrom);changed();toast(n+(n===1?' Punkt':' Punkte')+' gelöscht');return true}
+function envDelSel(){const ts=S.tracks.filter(t=>(t.env||[]).some(q=>q.sel));if(!ts.length)return false;pushUndo('Hüllkurvenpunkte löschen');let n=0;
+  for(const t of ts){const k=t.env.length;t.env=t.env.filter(q=>!q.sel);n+=k-t.env.length;logEnv(t)}changed();envLive();toast(n+(n===1?' Punkt':' Punkte')+' gelöscht');return true}
 /* Rechteck aufziehen (Shift+Ziehen auf freier Fläche): Punkte darin kommen zur Auswahl dazu */
 function envRect(e,t,tw,add){const r=tw.getBoundingClientRect(),H=r.height,sx=e.clientX,sy=e.clientY,box=el('div','envRect');document.body.append(box);
   const pick=ev=>{const x0=Math.min(sx,ev.clientX),x1=Math.max(sx,ev.clientX),y0=Math.min(sy,ev.clientY),y1=Math.max(sy,ev.clientY);
@@ -2110,7 +2116,7 @@ function envReset(){const withEnv=S.tracks.filter(t=>t.env&&t.env.length);if(!wi
   if(hasSel()){let ts=S.sync?withEnv.filter(t=>!t.lock||t.sel):withEnv.filter(t=>t.sel);if(!ts.length)ts=withEnv;pushUndo('Hüllkurve im Bereich zurücksetzen');for(const t of ts)envClearRange(t,S.sel.a-t.off,S.sel.b-t.off);
     toast(`Hüllkurve im markierten Bereich zurückgesetzt${ts.length>1?' · '+ts.length+' Spuren':''} – außerhalb unverändert`)}
   else{pushUndo('Alle Hüllkurven zurücksetzen');withEnv.forEach(t=>{t.env=[];logEnv(t)});toast(`${withEnv.length===1?'Hüllkurve':'Hüllkurven von '+withEnv.length+' Spuren'} zurückgesetzt (Strg+Z holt sie zurück)`)}
-  if(P.on)play(pos(),P.to,P.loop,P.loopFrom);changed()}
+  changed();envLive()}
 function envApply(){const ts=envTargets();if(!ts.length||!editable())return;editStop();pushUndo('Hüllkurve übernehmen');logOp(ts,{k:'envapply'});
   for(const t of ts){t.ch=t.ch.map(s=>mapSeq(s,(z,g0)=>{for(let i=0;i<z.length;i+=64){const g=envAt(t,(g0+i)/SR),e=Math.min(z.length,i+64);for(let k=i;k<e;k++)z[k]*=g}}));t.env=[]}changed(true);toast('Hüllkurve ins Audio übernommen')}
 

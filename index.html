@@ -149,6 +149,8 @@ body.trkdrag,body.trkdrag *{cursor:grabbing!important;user-select:none}
 #recent .ri:hover{background:var(--ds-hover)}
 #recent .ri .ic{display:flex;color:var(--ds-text-dim)}
 #recent .ri .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ds-text);font-size:13px}
+#recent .ri .nm{display:flex!important;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.3}#recent .ri .nm>span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#recent .ri .nm.un .t1{color:var(--ds-text-soft)}#recent .ri .nm .tn{color:var(--ds-text-dim);font-size:11.5px;font-weight:400;margin:0}
 #recent .ri .mt{color:var(--ds-text-dim);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
 #recent .ri .x{display:flex;padding:4px;border-radius:var(--ds-r-pill);color:var(--ds-text-dim);opacity:0}
 #recent .ri:hover .x{opacity:1}#recent .ri .x:hover{background:var(--ds-active-strong);color:var(--ds-danger-soft)}
@@ -598,9 +600,9 @@ function envPut(t,P,sn,vL,vR){const len=tLen(t)/SR,l0=P-t.off,l1=l0+sn.L,E=(t.en
 function envPinAt(t,x,vL,vR){const len=tLen(t)/SR,l=x-t.off;if(!(t.env||[]).length||l<=.002||l>=len-.002)return;t.env=t.env.filter(q=>!(q.t>l-.0015&&q.t<l+.0005)).concat([{t:l-.001,db:vL},{t:l,db:vR}]).sort((p,q)=>p.t-q.t)}
 /* Stille einfügen (Sync): Hüllkurve links/rechts unverändert lassen */
 function envIns(t,P,Ls,fn){const has=(t.env||[]).length,vL=has?envDbAt(t,P-t.off-.0005):0,vR=has?envDbAt(t,P-t.off+.0005):0;fn();if(has)envPut(t,P,{v0:vL,v1:vR,pts:[],L:Ls},vL,vR)}
-function removeTime(t,a,b,raw){const n=tLen(t),off0=t.off;const i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1>i0)t.ch=spliceCh(t.ch,i0,i1,null);if(a<t.off)t.off-=Math.min(b,t.off)-a;if(!raw)remapCuts(t,off0,x=>x<=a?x:x>=b?x-(b-a):a,x=>x>a+1e-9&&x<b-1e-9)}
-function insertSilence(t,at,len,raw){const n=tLen(t),off0=t.off;if(!n||len<=0)return;if(at<=t.off+1e-9)t.off+=len/SR;else{const p=Math.round((at-t.off)*SR);if(p>=n)return;t.ch=spliceCh(t.ch,p,p,t.ch.map(()=>Seq.zeros(len)))}if(!raw)remapCuts(t,off0,x=>x>at+1e-9?x+len/SR:x)}
-function insertAt(t,at,chs,raw){const n=tLen(t),off0=t.off,L=chs[0].length/SR;if(!n){t.off=at;t.ch=chs.map(sq);return}chs=matchCh(chs,t.ch.length);const p=Math.round((at-t.off)*SR);
+function removeTime(t,a,b,raw){resumeShift('r'+a+':'+b,x=>x>=b?x-(b-a):x>a?a:x);const n=tLen(t),off0=t.off;const i0=clamp(Math.round((a-t.off)*SR),0,n),i1=clamp(Math.round((b-t.off)*SR),0,n);if(i1>i0)t.ch=spliceCh(t.ch,i0,i1,null);if(a<t.off)t.off-=Math.min(b,t.off)-a;if(!raw)remapCuts(t,off0,x=>x<=a?x:x>=b?x-(b-a):a,x=>x>a+1e-9&&x<b-1e-9)}
+function insertSilence(t,at,len,raw){resumeShift('i'+at+':'+len,x=>x>=at?x+len/SR:x);const n=tLen(t),off0=t.off;if(!n||len<=0)return;if(at<=t.off+1e-9)t.off+=len/SR;else{const p=Math.round((at-t.off)*SR);if(p>=n)return;t.ch=spliceCh(t.ch,p,p,t.ch.map(()=>Seq.zeros(len)))}if(!raw)remapCuts(t,off0,x=>x>at+1e-9?x+len/SR:x)}
+function insertAt(t,at,chs,raw){resumeShift('i'+at+':'+chs[0].length,x=>x>=at?x+chs[0].length/SR:x);const n=tLen(t),off0=t.off,L=chs[0].length/SR;if(!n){t.off=at;t.ch=chs.map(sq);return}chs=matchCh(chs,t.ch.length);const p=Math.round((at-t.off)*SR);
   if(p<0){t.ch=t.ch.map((a,c)=>Seq.concat([chs[c],Seq.zeros(-p),a]));t.off=at}else if(p>n){t.ch=t.ch.map((a,c)=>Seq.concat([a,Seq.zeros(p-n),chs[c]]))}else t.ch=spliceCh(t.ch,p,p,chs);
   if(!raw)remapCuts(t,off0,x=>x>at+1e-9?x+L:x)}
 
@@ -610,9 +612,9 @@ const UNDO_MAX=20;
 let UNDO_ID=0;
 function pushUndo(label){const id=++UNDO_ID;S.lastUndoId=id;S.undo.push({...snap(),label,id});if(S.undo.length>UNDO_MAX)S.undo.shift();S.redo=[]}
 function restoreSnap(sn){const cur=new Map(S.tracks.map(t=>[t.id,t]));S.tracks=sn.tracks.map(t=>{const r={...t,ch:t.ch.slice(),cuts:(t.cuts||[]).slice(),env:(t.env||[]).map(p=>({...p})),log:(t.log||[]).slice(),clr:(t.clr||[]).map(q=>({...q}))},c=cur.get(t.id);if(c){r.mute=c.mute;r.solo=c.solo;r.lock=c.lock;r.vol=c.vol;r.pan=c.pan;r.h=c.h;r.name=c.name}return r});S.sel={...sn.sel};for(const k of TKEYS)if(sn[k])S[k]=sn[k].map(x=>({...x}));if(!byId(S.focus))S.focus=null;changed(true)}
-function undo(){if(S.busy||R.on)return;if(!S.undo.length)return toast('Nichts rückgängig zu machen');stopAll();const u=S.undo.pop();S.redo.push({...snap(),label:u.label,id:u.id});if(S.redo.length>UNDO_MAX)S.redo.shift();restoreSnap(u);toast('Rückgängig: '+u.label+(S.undo.length?` · noch ${S.undo.length} Schritte`:''))}
-function redo(){if(S.busy||R.on)return;if(!S.redo.length)return toast('Nichts zu wiederholen');stopAll();const u=S.redo.pop();S.undo.push({...snap(),label:u.label,id:u.id});if(S.undo.length>UNDO_MAX)S.undo.shift();restoreSnap(u);toast('Wiederholt: '+u.label+(S.redo.length?` · noch ${S.redo.length}`:''))}
-function changed(struct){if(struct)renderTracks();else updRows();renderTextUI();clampView();invalidate();updUI();scheduleSave();bkHint()}
+function undo(){if(S.busy||R.on)return;if(!S.undo.length)return toast('Nichts rückgängig zu machen');editStop();const u=S.undo.pop();S.redo.push({...snap(),label:u.label,id:u.id});if(S.redo.length>UNDO_MAX)S.redo.shift();restoreSnap(u);toast('Rückgängig: '+u.label+(S.undo.length?` · noch ${S.undo.length} Schritte`:''))}
+function redo(){if(S.busy||R.on)return;if(!S.redo.length)return toast('Nichts zu wiederholen');editStop();const u=S.redo.pop();S.undo.push({...snap(),label:u.label,id:u.id});if(S.undo.length>UNDO_MAX)S.undo.shift();restoreSnap(u);toast('Wiederholt: '+u.label+(S.redo.length?` · noch ${S.redo.length}`:''))}
+function changed(struct){if(S.resume)setTimeout(editResume,0);if(struct)renderTracks();else updRows();renderTextUI();clampView();invalidate();updUI();scheduleSave();bkHint()}
 /* einmal pro Sitzung erinnern, wenn die Sicherung an ist, aber noch kein Ordner gewählt wurde */
 let bkHinted=false;function bkHint(){try{if(bkHinted||!S.tracks.some(t=>tLen(t))||!BK.on||bkDir||!window.showDirectoryPicker)return}catch{return}bkHinted=true;
   setTimeout(()=>toast('Automatische Sicherung ist an – bitte einmal auf das gelbe Uhr-Symbol oben klicken und einen Ordner wählen.',7000),1200)}
@@ -814,6 +816,11 @@ function feedPlay(){if(!P.on)return;const ahead=AC.currentTime+4;
     n.srcs.push(src);src.onended=()=>{const i=n.srcs.indexOf(src);if(i>=0)n.srcs.splice(i,1);try{src.disconnect()}catch{}}}}
 function stopPlay(){clearInterval(P.feedT);for(const n of P.nodes){for(const s of n.srcs){try{s.stop()}catch{}try{s.disconnect()}catch{}}try{n.c.out.disconnect()}catch{}}P.nodes=[];if(P.on){P.on=false;updTransport();updPhead();updClock()}}
 function stopAll(){stopPlay();stopPreview();P.paused=null;updTransport();updPhead()}
+/* Bearbeiten während der Wiedergabe: anhalten, bearbeiten, danach an derselben Stelle weiterspielen.
+   Wird Zeit herausgeschnitten oder eingefügt, rückt die Abspielposition mit (siehe removeTime/insertAt/insertSilence). */
+function editStop(){if(P.on&&!R.on)S.resume={t:pos(),to:P.to>=projDur()-.02?null:P.to,loop:P.loop,loopFrom:P.loopFrom,adj:new Set()};stopAll()}
+function editResume(){const r=S.resume;if(!r||S.busy)return;S.resume=null;if(P.on||R.on)return;const d=projDur();if(r.t>=d-.05)return;play(r.t,r.to!=null&&r.to>r.t?r.to:null,r.loop,r.loop?Math.min(r.loopFrom,r.t):null)}
+function resumeShift(key,f){const r=S.resume;if(!r||r.adj.has(key))return;r.adj.add(key);r.t=Math.max(0,f(r.t));if(r.to!=null)r.to=f(r.to);if(r.loopFrom!=null)r.loopFrom=f(r.loopFrom)}
 function pos(){if(R.on)return R.from+Math.max(0,AC.currentTime-R.t0);if(P.on)return P.from+Math.max(0,AC.currentTime-P.t0);return P.paused?P.paused.pos:S.sel.a}
 function playDefault(){if(hasSel())play(S.sel.a,S.sel.b,S.loop);else play(S.sel.a,null)}
 function togglePlay(){if(R.on)return stopRec();if(P.on||PV.src){stopAll();return}if(P.paused){const p=P.paused;play(p.pos,p.to,p.loop,p.loopFrom);return}playDefault()}
@@ -1145,7 +1152,7 @@ async function ummApply(ts,p){setBusy(true,'Suche Ähms …',true);await paintPa
   setBusy(false);
   if(!cuts.length)return toast(skip?`Nichts ausgeblendet – ${skip} gefunden, aber dort spricht gleichzeitig jemand anderes`:'Keine Ähms gefunden'+(ts.some(t=>!t.umm)?' – Tipp: ein Ähm markieren und „Beispiel aus Auswahl“ wählen':''),5000);
   cuts.sort((x,y)=>x.a-y.a);const M=[];for(const c of cuts){const l=M[M.length-1];if(l&&c.a<=l.b+.01)l.b=Math.max(l.b,c.b);else M.push({...c})}
-  stopAll();pushUndo('Ähms entfernen');let sum=0;
+  editStop();pushUndo('Ähms entfernen');let sum=0;
   for(let i=M.length-1;i>=0;i--){const c=M[i],set=p.sync?ummSet(ts):[c.t];hideRange(set,c.a,c.b,'umm',(p.fade||0)/1000);sum+=c.b-c.a}
   if(hasSel())S.sel.b=Math.max(S.sel.a,S.sel.b-sum);S.lastFx='umm';changed(true);
   toast(`${M.length} ${M.length===1?'Ähm':'Ähms'} ausgeblendet · ${nf(sum,1)} s${skip?` · ${skip} übersprungen (jemand spricht gleichzeitig)`:''} – über „Ausgeblendete Passagen“ zurückholbar`,6000)}
@@ -1530,7 +1537,7 @@ function showParams(fx){const p=FXP[fx.id];for(const d of fx.params)if(d.show)fx
 function openFx(id,force){const was=S.openFx===id;S.openFx=was&&!force?null:id;for(const f of FX)f.el.it.classList.toggle('open',f.id===S.openFx);if(S.openFx){FXM[id].el.it.scrollIntoView({block:'nearest',behavior:'smooth'});updFxInfo()}}
 let infoT;function updFxInfo(){clearTimeout(infoT);infoT=setTimeout(()=>{const fx=FXM[S.openFx];if(!fx||!fx.info)return;const ts=targets(true);if(!ts){fx.el.info.innerHTML='<span class="warn">Keine Spur ausgewählt</span>';return}try{fx.el.info.innerHTML=fx.info(ts)}catch(e){console.warn(e)}},180)}
 function fxRange(t,fx,p){const n=tLen(t);if(fx.id==='fin'&&!hasSel())return[0,Math.min(n,Math.round(p.dur*SR))];if(fx.id==='fout'&&!hasSel())return[Math.max(0,n-Math.round(p.dur*SR)),n];return trackRange(t)}
-async function applyFx(id){const fx=FXM[id];if(!fx||S.busy||R.on)return;const ts=targets();if(!ts)return;const p=fxParams(fx);stopAll();
+async function applyFx(id){const fx=FXM[id];if(!fx||S.busy||R.on)return;const ts=targets();if(!ts)return;const p=fxParams(fx);editStop();
   if(fx.apply)return fx.apply(ts,p);if(fx.lenChange)return truncSync(ts,p);
   setBusy(true,fx.name+(ts.length>1?` · ${ts.length} Spuren`:'')+' …',true);await paintPause();let pushed=false;
   try{const c=fx.prepare?fx.prepare(ts,p):{};pushUndo(fx.name);pushed=true;let any=false,maxNew=0;
@@ -1540,7 +1547,7 @@ async function applyFx(id){const fx=FXM[id];if(!fx||S.busy||R.on)return;const ts
     if(fx.lenChange&&hasSel())S.sel.b=S.sel.a+maxNew/SR;
     S.lastFx=id;changed(true);toast(fx.name+' angewendet'+(c.note?' · '+c.note:''))}
   catch(e){if(pushed){const u=S.undo.pop();restoreSnap(u)}if(e.cancelled)toast(fx.name+' abgebrochen – nichts geändert');else{console.error(e);toast('Fehler: '+e.message,4500)}}
-  finally{setBusy(false)}}
+  finally{setBusy(false);setTimeout(editResume,0)}}
 async function truncSync(ts,p){/* gemeinsame Pausen aller ausgewählten Spuren finden und in ALLEN Spuren schneiden */
   const A=hasSel()?S.sel.a:Math.min(...ts.map(t=>t.off)),B=hasSel()?S.sel.b:Math.max(...ts.map(tEnd)),n=Math.round((B-A)*SR);if(n<2)return;
   setBusy(true,'Suche Pausen …',true);await paintPause();let cuts;try{cuts=await silenceCutsAsync(ts.flatMap(t=>t.ch.map(s=>({s,st:Math.round((t.off-A)*SR)}))),n,p)}catch(e){if(e.cancelled){setBusy(false);return toast('Stille kürzen abgebrochen – nichts geändert')}throw e}finally{setBusy(false)}
@@ -1870,7 +1877,7 @@ const syncSet=ts=>S.sync?S.tracks.filter(t=>!t.lock||ts.includes(t)):ts;
 function opCopy(silent){const ts=targets();if(!ts)return false;if(!hasSel()){toast('Erst einen Bereich auswählen');return false}
   {const pr=ts.map(t=>{const[i0,i1]=trackRange(t);return[t.ch.map(s=>s.sub(i0,i1)),envSnap(t,t.off+i0/SR,t.off+i1/SR)]}).filter(x=>x[0][0].length);S.clip=pr.map(x=>x[0]);S.clipEnv=pr.map(x=>x[1])}if(!S.clip.length){S.clip=null;toast('Bereich ist leer');return false}
   if(silent!==true)toast('Kopiert · '+nf(S.sel.b-S.sel.a,2)+' s');updUI();return true}
-function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');stopAll();pushUndo(typeof label==='string'?label:'Löschen');
+function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');editStop();pushUndo(typeof label==='string'?label:'Löschen');
   const{a,b}=S.sel;logOp(syncSet(ts),{k:'del',a,b});for(const t of syncSet(ts)){const keep=envKeep(t,a,b);removeTime(t,a,b);if(keep)keep()}shiftTextDel(a,b);setSel(a,a);changed()}
 /* ============ Ausblenden: Passage herausnehmen, aber mit der Spur aufbewahren (zurückholbar) ============
    t.hid=[{gid,at,len,seg,clr,env,txt}] – at = Stelle relativ zum Spuranfang. gid verbindet die Teile mehrerer Spuren (Sync).
@@ -1878,7 +1885,7 @@ function opDelete(label){if(!editable())return;const ts=targets();if(!ts)return;
 let HIDN=0;
 function opHide(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich markieren');
   const{a,b}=S.sel,set=syncSet(ts).filter(t=>tLen(t));if(!set.some(t=>a<tEnd(t)&&b>t.off))return toast('Die Markierung liegt außerhalb des Audios');
-  stopAll();pushUndo('Ausblenden');const L=hideRange(set,a,b);
+  editStop();pushUndo('Ausblenden');const L=hideRange(set,a,b);
   setSel(a,a);changed(true);toast(`${nf(L,1)} s ausgeblendet – über die gelbe Markierung oder „Ausgeblendete Passagen“ zurückholbar`,4000)}
 /* [a,b) ausblenden; Spuren, die erst danach beginnen, rücken mit (bleiben synchron). tag: 'umm' = gefundenes Ähm */
 function hideRange(set,a,b,tag,fade){const gid='h'+Date.now().toString(36)+(HIDN++).toString(36)+Math.random().toString(36).slice(2,5),txt={};
@@ -1894,7 +1901,7 @@ function hideRange(set,a,b,tag,fade){const gid='h'+Date.now().toString(36)+(HIDN
     t.hid=(t.hid||[]).concat([{gid,at:Math.round(la*1e4)/1e4,len:(i1-i0)/SR,seg,clr:pcs,env,txt,...(tag?{tag}:{}),...(efx?{efx}:{})}]).sort((x,y)=>x.at-y.at);L=Math.max(L,(i1-i0)/SR)}
   for(const k of TKEYS)S[k]=S[k].filter(it=>!(it.a>=a-1e-6&&it.b<=b+1e-6));shiftTextDel(a,b);return L}
 const hidParts=gid=>S.tracks.map(t=>[t,(t.hid||[]).find(h=>h.gid===gid)]).filter(x=>x[1]);
-function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!parts.length)return;stopAll();pushUndo('Wieder einblenden');const{P,L}=restoreHidCore(parts);
+function restoreHid(gid){if(!editable())return;const parts=hidParts(gid);if(!parts.length)return;editStop();pushUndo('Wieder einblenden');const{P,L}=restoreHidCore(parts);
   S.tracks.forEach(x=>x.sel=parts.some(p=>p[0]===x));setSel(P,P+L);changed(true);toast(`${nf(L,1)} s wieder eingeblendet`)}
 function restoreHidCore(parts){let P=null,L=0,txt=null;
   for(const[t,h]of parts){const at=t.off+h.at,off0=t.off,dAbs=clrAbs(t),NL=h.seg[0].length;if(P==null){P=at;txt=h.txt}L=Math.max(L,h.len);
@@ -1907,7 +1914,7 @@ function restoreHidCore(parts){let P=null,L=0,txt=null;
   return{P,L}}
 function restoreTag(tag){if(!editable())return;const pos=g=>{const p=hidParts(g)[0];return p[0].off+p[1].at};
   const gids=[...new Set(S.tracks.flatMap(t=>(t.hid||[]).filter(h=>h.tag===tag).map(h=>h.gid)))].sort((x,y)=>pos(y)-pos(x));if(!gids.length)return;
-  stopAll();pushUndo('Ähms wieder einblenden');let L=0;for(const g of gids)L+=restoreHidCore(hidParts(g)).L;setSel(S.sel.a,S.sel.a);changed(true);toast(`${gids.length} Ähms wieder eingeblendet · ${nf(L,1)} s`)}
+  editStop();pushUndo('Ähms wieder einblenden');let L=0;for(const g of gids)L+=restoreHidCore(hidParts(g)).L;setSel(S.sel.a,S.sel.a);changed(true);toast(`${gids.length} Ähms wieder eingeblendet · ${nf(L,1)} s`)}
 async function deleteHid(gid){const parts=hidParts(gid);if(!parts.length)return;
   if(!await confirmBox('Endgültig löschen?',`Die ausgeblendete Passage (${nf(parts[0][1].len,1)} s) wird endgültig entfernt und lässt sich danach nur noch mit Strg+Z zurückholen.`,'Löschen'))return;
   pushUndo('Ausgeblendete Passage löschen');for(const[t,h]of parts)t.hid=t.hid.filter(x=>x!==h);changed(true);toast('Ausgeblendete Passage gelöscht')}
@@ -1943,7 +1950,7 @@ function renderHid(){const box=$('#hidList');if(!box)return;const groups=new Map
     bR.onclick=()=>restoreHid(g.h.gid);bP.onclick=()=>previewHid(g.h.gid);bD.onclick=()=>deleteHid(g.h.gid);
     d.querySelector('.tx').onclick=()=>{moveCur(g.t.off+g.h.at);ensureVisible(g.t.off+g.h.at)};d.querySelector('.tx').title='Zur Stelle springen';box.append(d)}}
 function opCut(){if(!editable())return;if(opCopy(true))opDelete('Ausschneiden')}
-function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage ist leer');stopAll();pushUndo('Einfügen');
+function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage ist leer');editStop();pushUndo('Einfügen');
   let ts=S.tracks.filter(t=>t.sel);if(!ts.length&&byId(S.focus))ts=[byId(S.focus)];const shTxt=true;
   {const lp={k:'paste',a:S.sel.a,b:hasSel()?S.sel.b:S.sel.a,len:r4(Math.max(...S.clip.map(c=>c[0].length))/SR)};logOp(ts,lp);logOp(syncSet(ts).filter(x=>!ts.includes(x)),{...lp,z:1})}
   if(hasSel()){const{a,b}=S.sel;for(const t of syncSet(ts)){const keep=envKeep(t,a,b);removeTime(t,a,b);if(keep)keep()}if(shTxt)shiftTextDel(a,b)}
@@ -1957,16 +1964,16 @@ function opPaste(){if(!editable())return;if(!S.clip)return toast('Zwischenablage
 /* Stille: Hüllkurve in der Markierung auf stumm setzen (zerstörungsfrei, kurze Rampen gegen Knacken) – rückgängig per Hüllkurve oder Strg+Z */
 function envSilenceRange(t,a,b){const len=tLen(t)/SR;a=clamp(a,0,len);b=clamp(b,0,len);if(b-a<.002)return false;const r=Math.min(.005,(b-a)/4),va=envDbAt(t,a),vb=envDbAt(t,b),out=(t.env||[]).filter(q=>q.t<a-1e-6||q.t>b+1e-6);
   out.push({t:a,db:Math.round(va*10)/10},{t:a+r,db:ENV_MIN},{t:b-r,db:ENV_MIN},{t:b,db:Math.round(vb*10)/10});out.sort((x,y)=>x.t-y.t);t.env=out;logEnv(t);return true}
-function opSilence(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');stopAll();pushUndo('Stille');let n=0;
+function opSilence(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst einen Bereich auswählen');editStop();pushUndo('Stille');let n=0;
   for(const t of ts)if(envSilenceRange(t,S.sel.a-t.off,S.sel.b-t.off))n++;if(!n){S.undo.pop();return toast('Die Markierung liegt außerhalb des Audios')}
   changed();toast('Markierung stumm (Hüllkurve) – mit „Hüllkurve zurücksetzen“ wieder hörbar',3500)}
-function opTrim(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst den Bereich auswählen, der bleiben soll');stopAll();pushUndo('Zuschneiden');logOp(ts,{k:'trim',a:S.sel.a,b:S.sel.b});
+function opTrim(){if(!editable())return;const ts=targets();if(!ts)return;if(!hasSel())return toast('Erst den Bereich auswählen, der bleiben soll');editStop();pushUndo('Zuschneiden');logOp(ts,{k:'trim',a:S.sel.a,b:S.sel.b});
   for(const t of ts){const[i0,i1]=trackRange(t),off0=t.off;t.ch=t.ch.map(s=>s.sub(i0,i1));t.off+=i0/SR;remapCuts(t,off0,x=>x)}changed()}
-function opDup(){if(!editable())return;const ts=targets();if(!ts)return;stopAll();pushUndo('Duplizieren');
+function opDup(){if(!editable())return;const ts=targets();if(!ts)return;editStop();pushUndo('Duplizieren');
   for(const t of ts){const[i0,i1]=trackRange(t);if(i1<=i0)continue;const n=newTrack({name:t.name+' (Kopie)',off:t.off+i0/SR,ch:t.ch.map(s=>s.sub(i0,i1)),vol:t.vol,pan:t.pan});S.tracks.splice(S.tracks.indexOf(t)+1,0,n)}changed(true)}
 function opMono(){if(!editable())return;const ts=(targets()||[]).filter(t=>t.ch.length>1);if(!ts.length)return toast('Keine Stereospur ausgewählt');pushUndo('In Mono');logOp(ts,{k:'mono'});for(const t of ts)t.ch=matchCh(t.ch,1);changed(true)}
 function addTrack(){if(!editable())return;pushUndo('Neue Spur');const t=newTrack({sel:true});S.tracks.forEach(x=>x.sel=false);t.sel=true;S.tracks.push(t);S.focus=t.id;changed(true)}
-async function deleteTrack(t){if(!editable())return;if(tLen(t)&&!await confirmBox('Spur löschen?',`„${t.name}“ (${fmtShort(tLen(t)/SR)}) wird entfernt. Mit Strg+Z lässt sich das rückgängig machen.`,'Löschen'))return;stopAll();pushUndo('Spur löschen');S.tracks=S.tracks.filter(x=>x!==t);if(S.focus===t.id)S.focus=null;changed(true)}
+async function deleteTrack(t){if(!editable())return;if(tLen(t)&&!await confirmBox('Spur löschen?',`„${t.name}“ (${fmtShort(tLen(t)/SR)}) wird entfernt. Mit Strg+Z lässt sich das rückgängig machen.`,'Löschen'))return;editStop();pushUndo('Spur löschen');S.tracks=S.tracks.filter(x=>x!==t);if(S.focus===t.id)S.focus=null;changed(true)}
 function moveTrack(t,d){const i=S.tracks.indexOf(t),j=i+d;if(j<0||j>=S.tracks.length)return;S.tracks.splice(i,1);S.tracks.splice(j,0,t);changed(true)}
 function selectAll(){S.tracks.forEach(t=>t.sel=true);setSel(0,projDur());invalidate();updRows();updUI()}
 function toggleMS(k){let ts=S.tracks.filter(t=>t.sel);if(!ts.length&&byId(S.focus))ts=[byId(S.focus)];if(!ts.length)return;if(k==='solo')return setSolo(ts,false);const v=!ts[0][k];ts.forEach(t=>t[k]=v);mixChanged()}
@@ -2078,7 +2085,7 @@ function envClearRange(t,a,b){const len=tLen(t)/SR;a=clamp(a,0,len);b=clamp(b,0,
 const envSelN=()=>S.tracks.reduce((n,t)=>n+(t.env||[]).filter(q=>q.sel).length,0);
 function envSelClear(){let n=0;for(const t of S.tracks)for(const q of t.env||[])if(q.sel){delete q.sel;n++}if(n){invalidate();setStatus('Bereit')}}
 function envSelectAll(){const t=byId(S.focus)||S.tracks.find(x=>x.sel);if(!t||!(t.env||[]).length)return toast('Diese Spur hat keine Hüllkurvenpunkte');envSelClear();t.env.forEach(q=>q.sel=true);invalidate();setStatus(t.env.length+' Punkte ausgewählt · ziehen = verschieben · Entf = löschen · Esc = Auswahl aufheben')}
-function envDelSel(){const ts=S.tracks.filter(t=>(t.env||[]).some(q=>q.sel));if(!ts.length)return false;stopAll();pushUndo('Hüllkurvenpunkte löschen');let n=0;
+function envDelSel(){const ts=S.tracks.filter(t=>(t.env||[]).some(q=>q.sel));if(!ts.length)return false;editStop();pushUndo('Hüllkurvenpunkte löschen');let n=0;
   for(const t of ts){const k=t.env.length;t.env=t.env.filter(q=>!q.sel);n+=k-t.env.length;logEnv(t)}if(P.on)play(pos(),P.to,P.loop,P.loopFrom);changed();toast(n+(n===1?' Punkt':' Punkte')+' gelöscht');return true}
 /* Rechteck aufziehen (Shift+Ziehen auf freier Fläche): Punkte darin kommen zur Auswahl dazu */
 function envRect(e,t,tw,add){const r=tw.getBoundingClientRect(),H=r.height,sx=e.clientX,sy=e.clientY,box=el('div','envRect');document.body.append(box);
@@ -2096,25 +2103,25 @@ function envReset(){const withEnv=S.tracks.filter(t=>t.env&&t.env.length);if(!wi
     toast(`Hüllkurve im markierten Bereich zurückgesetzt${ts.length>1?' · '+ts.length+' Spuren':''} – außerhalb unverändert`)}
   else{pushUndo('Alle Hüllkurven zurücksetzen');withEnv.forEach(t=>{t.env=[];logEnv(t)});toast(`${withEnv.length===1?'Hüllkurve':'Hüllkurven von '+withEnv.length+' Spuren'} zurückgesetzt (Strg+Z holt sie zurück)`)}
   if(P.on)play(pos(),P.to,P.loop,P.loopFrom);changed()}
-function envApply(){const ts=envTargets();if(!ts.length||!editable())return;stopAll();pushUndo('Hüllkurve übernehmen');logOp(ts,{k:'envapply'});
+function envApply(){const ts=envTargets();if(!ts.length||!editable())return;editStop();pushUndo('Hüllkurve übernehmen');logOp(ts,{k:'envapply'});
   for(const t of ts){t.ch=t.ch.map(s=>mapSeq(s,(z,g0)=>{for(let i=0;i<z.length;i+=64){const g=envAt(t,(g0+i)/SR),e=Math.min(z.length,i+64);for(let k=i;k<e;k++)z[k]*=g}}));t.env=[]}changed(true);toast('Hüllkurve ins Audio übernommen')}
 
 /* ============================== Schnittkanten & Passagen verschieben ============================== */
 function opSplit(){if(!editable())return;let ts=S.sync?S.tracks.filter(t=>tLen(t)&&(!t.lock||t.sel)):targets(true);
   if(!ts||!ts.length)ts=S.tracks.filter(t=>tLen(t)&&S.sel.a>t.off&&S.sel.a<tEnd(t));/* keine Spur gewählt → alle Spuren unter dem Cursor */
-  if(!ts.length)return toast('Cursor liegt auf keiner Spur mit Audio');const pts=hasSel()?[S.sel.a,S.sel.b]:[S.sel.a];let n=0;stopAll();pushUndo('Schnitt');logOp(ts,{k:'split',pts});
+  if(!ts.length)return toast('Cursor liegt auf keiner Spur mit Audio');const pts=hasSel()?[S.sel.a,S.sel.b]:[S.sel.a];let n=0;editStop();pushUndo('Schnitt');logOp(ts,{k:'split',pts});
   for(const t of ts){const len=tLen(t)/SR,c=(t.cuts||[]).slice();for(const p of pts){const l=p-t.off;if(l>.001&&l<len-.001&&!c.some(x=>Math.abs(x-l)<.002)){c.push(l);n++}}t.cuts=c.sort((x,y)=>x-y)}
   if(!n){S.undo.pop();return toast('Kein neuer Schnitt – Cursor liegt außerhalb des Audios oder auf einem Schnitt')}changed();toast(n===1?'Schnitt gesetzt':n+' Schnitte gesetzt')}
 function opJoin(){if(!editable())return;const ts=S.sync?S.tracks.filter(t=>!t.lock||t.sel):S.tracks.filter(t=>t.sel);const tt=ts.length?ts:(targets()||[]);let n=0;
   const keep=t=>(t.cuts||[]).filter(c=>{const x=t.off+c,inside=!hasSel()||(x>=S.sel.a-1e-4&&x<=S.sel.b+1e-4);if(inside)n++;return !inside});
   const res=tt.map(t=>[t,keep(t)]);if(!n)return toast('Keine Schnitte im Bereich');pushUndo('Schnitte entfernen');logOp(tt,{k:'join',a:hasSel()?S.sel.a:null,b:hasSel()?S.sel.b:null});for(const[t,c]of res)t.cuts=c;changed();toast(n+(n===1?' Schnitt':' Schnitte')+' entfernt')}
 function cutNear(t,x){for(const c of t.cuts||[])if(Math.abs(timeToX(t.off+c)-x)<=6)return c;return null}
-function removeCutAt(t,c){const abs=t.off+c,grp=(S.sync?S.tracks.filter(x=>!x.lock||x===t):[t]).filter(x=>(x.cuts||[]).some(v=>Math.abs(x.off+v-abs)<.002));if(!grp.length)return;stopAll();pushUndo('Schnitt entfernen');
+function removeCutAt(t,c){const abs=t.off+c,grp=(S.sync?S.tracks.filter(x=>!x.lock||x===t):[t]).filter(x=>(x.cuts||[]).some(v=>Math.abs(x.off+v-abs)<.002));if(!grp.length)return;editStop();pushUndo('Schnitt entfernen');
   for(const x of grp){logOp([x],{k:'join',a:abs,b:abs});x.cuts=x.cuts.filter(v=>Math.abs(x.off+v-abs)>=.002)}changed();toast(grp.length>1?`Schnitt entfernt (${grp.length} Spuren)`:'Schnitt entfernt',1800)}
 function removeCut(t,c){pushUndo('Schnitt entfernen');logOp([t],{k:'join',a:t.off+c,b:t.off+c});t.cuts=t.cuts.filter(x=>x!==c);changed()}
 function segmentAt(t,tm){const n=tLen(t)/SR,l=tm-t.off;if(l<0||l>n)return null;const e=[0,...(t.cuts||[]),n];for(let i=0;i<e.length-1;i++)if(l>=e[i]&&l<=e[i+1])return[t.off+e[i],t.off+e[i+1]];return null}
 /* Passage [a,b] ausschneiden und an Zeit T (Ziel-Zeitachse) wieder einfügen – der Rest rückt nach */
-function movePassage(a,b,T,aff){const L=b-a,NL=Math.round(L*SR);if(NL<1||Math.abs(T-a)<1e-4)return;stopAll();pushUndo('Passage verschieben');logOp(aff,{k:'move',a,b,T});
+function movePassage(a,b,T,aff){const L=b-a,NL=Math.round(L*SR);if(NL<1||Math.abs(T-a)<1e-4)return;editStop();pushUndo('Passage verschieben');logOp(aff,{k:'move',a,b,T});
   const map=moveCore(a,b,T,aff);
   for(const k of TKEYS)for(const it of S[k]){const na=map(it.a),nb=map(it.b);it.a=Math.min(na,nb);it.b=Math.max(na,nb)}/* Kapitel/Kommentare/Untertitel wandern immer mit */
   for(const k of TKEYS)sortT(k);setSel(T,T+L);changed();toast('Passage verschoben'+(S.sync?' (alle Spuren)':'')+(map.filled>.001?` · Lücke gefüllt (${nf(Math.min(map.filled,L),1)} s), dahinter ${map.filled>=L-1e-3?'nichts verschoben':'nur um '+nf(L-map.filled,1)+' s verschoben'}`:''),3500)}
@@ -2171,7 +2178,7 @@ function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b
     const bx=clamp(xp,0,w),bw=clamp(xp+L*S.view.pps,0,w)-bx;box.style.display=bw>1?'block':'none';box.style.left=(HW+bx)+'px';box.style.width=bw+'px';box.style.top=(last.top+2)+'px';box.style.height=Math.max(10,last.bot-last.top-4)+'px';box.classList.toggle('xtrk',!!dst);
     if(ghost){ghost.style.left=(xp-bx-1.5)+'px';ghost.style.top=(-3.5)+'px';ghost.style.height=(dst?Math.max(10,last.bot-last.top):Math.max(10,bot-top))+'px'}};
   const mv=ev=>{if(cancelled)return;if(!moved&&Math.abs(ev.clientX-sx)<4&&(sy==null||Math.abs(ev.clientY-sy)<6))return;
-    if(!moved){moved=true;stopAll();document.body.classList.add('panning');mkGhost();collapse()}
+    if(!moved){moved=true;editStop();document.body.classList.add('panning');mkGhost();collapse()}
     let dst=null,dq=null;if(canX){const h=trackAt(ev.clientY);if(h&&h.t!==src){dst=h.t;dq=h.q}}
     if(dst){if(saved){restore();S.dragMv=true;for(const x of aff)invalidateTrack(x)}}else if(!saved)collapse();/* Lücken-Vorschau nur innerhalb der Spur */
     const P0=Math.max(0,xToTime(ev.clientX-left)-grab);let P=P0,snap=null;
@@ -2182,14 +2189,14 @@ function startMoveDrag(t,tw,left,sx,keepSelOnClick,sy){const a=S.sel.a,b=S.sel.b
     const x=ev.clientX-left,w=tw.clientWidth;if(x<0||x>w){S.view.t0+=(x<0?x:x-w)/S.view.pps*.2;clampView();invalidate()}place()};
   const hide=()=>{ins.style.display='none';box.style.display='none';if(ghost){ghost.remove();ghost=null}};
   const fin=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);document.removeEventListener('keydown',esc,true);document.body.classList.remove('panning');hide();showSnap(null);S.mv=null;restore();setStatus('Bereit')};
-  const esc=e=>{e.preventDefault();e.stopPropagation();if(e.key==='Escape'){cancelled=true;fin();for(const x of aff)invalidateTrack(x);invalidate();toast('Verschieben abgebrochen')}};/* während des Ziehens keine anderen Tasten */
+  const esc=e=>{e.preventDefault();e.stopPropagation();if(e.key==='Escape'){cancelled=true;fin();for(const x of aff)invalidateTrack(x);invalidate();toast('Verschieben abgebrochen');editResume()}};/* während des Ziehens keine anderen Tasten */
   const up=()=>{if(cancelled)return;fin();
     if(!moved){if(!keepSelOnClick){const tm=Math.max(0,xToTime(sx-left));if(!S.sync)S.tracks.forEach(x=>x.sel=x===t);setSel(tm,tm)}updRows();invalidate();updUI();return}
-    if(last&&last.dst)moveAcross(src,a,b,last.dst,last.P);else if(last&&!last.cancel)movePassage(a,b,last.P,aff);else{for(const x of aff)invalidateTrack(x);invalidate();toast('Passage bleibt an ihrem Platz')}};
+    if(last&&last.dst)moveAcross(src,a,b,last.dst,last.P);else if(last&&!last.cancel)movePassage(a,b,last.P,aff);else{for(const x of aff)invalidateTrack(x);invalidate();toast('Passage bleibt an ihrem Platz');editResume()}};
   document.addEventListener('keydown',esc,true);tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);tracksEl.addEventListener('pointercancel',up)}
 
 /* Passage [a,b] aus src herausnehmen (Lücke schließt sich) und in dst bei Zeit P einfügen (dort wird Platz gemacht). dst='new' → neue Spur darunter */
-function moveAcross(src,a,b,dst,P){const NL=Math.round((b-a)*SR),L=NL/SR;if(NL<1)return;stopAll();pushUndo('Passage in andere Spur verschieben');const sn={...envSnap(src,a,b),L};/* Hüllkurve der Passage wandert mit */
+function moveAcross(src,a,b,dst,P){const NL=Math.round((b-a)*SR),L=NL/SR;if(NL<1)return;editStop();pushUndo('Passage in andere Spur verschieben');const sn={...envSnap(src,a,b),L};/* Hüllkurve der Passage wandert mit */
   const n=tLen(src),s0=Math.round((a-src.off)*SR),pre=clamp(-s0,0,NL),seg=src.ch.map(s=>{const body=s.sub(Math.max(0,s0),Math.min(n,s0+NL));return Seq.concat([Seq.zeros(pre),body,Seq.zeros(NL-pre-body.length)])});
   const mkCut=(t,pts)=>{const len=tLen(t)/SR,c=(t.cuts||[]).slice();for(const p of pts){const l=p-t.off;if(l>.001&&l<len-.001&&!c.some(x=>Math.abs(x-l)<.002))c.push(l)}t.cuts=c.sort((x,y)=>x-y)};
   /* Mit Sync: Quelle behält Stille (nichts rückt nach), Ziel macht Platz, alle übrigen nicht gesperrten Spuren bekommen dort eine Lücke → der Rest bleibt synchron */
@@ -2595,7 +2602,7 @@ async function saveSessionLocked(){
   const hidOut=t=>(t.hid||[]).map(h=>({gid:h.gid,tag:h.tag,efx:h.efx,at:h.at,len:h.len,clr:h.clr||[],env:h.env||[],txt:h.txt||null,segB:refCh(h.seg),segN:h.seg.map(s=>s.b.map(x=>x.length))}));
   const tracks=S.tracks.map(t=>({id:t.id,name:t.name,hid:hidOut(t),chB:ref(t),chN:t.ch.map(s=>s.b.map(blk=>blk.length)),cuts:t.cuts||[],env:t.env||[],log:t.log||[],lock:!!t.lock,umm:t.umm||null,clr:t.clr||[],off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,color:t.color,h:t.h}));
   try{for(let i=0;i<fresh.length;i+=8){await idb.putMany(fresh.slice(i,i+8).map(([id,blk])=>[id,blk.slice()]));await yieldUI()}/* slice: nur die Bytes des Blocks, nicht den ganzen Puffer */
-    let list=(await sesList()).filter(e=>e.sid!==sid);list.unshift({sid,name:sesName(),n:S.tracks.length,dur:projDur(),saved:Date.now(),bytes:projBytes()});
+    let list=(await sesList()).filter(e=>e.sid!==sid);list.unshift({sid,name:sesName(),pn:S.projName||'',tn:S.tracks.slice(0,3).map(t=>t.name),n:S.tracks.length,dur:projDur(),saved:Date.now(),bytes:projBytes()});
     const drop=list.slice(SES_MAX);list=list.slice(0,SES_MAX);
     await idb.putMany([['ses:'+sid,{v:3,sr:SR,tid:TID,mid:MID,sel:S.sel,view:S.view,marks:S.marks,notes:S.notes,subs:S.subs,projName:S.projName||'',tracks}],['sessions',list]]);
     if(drop.length)await idb.delMany(drop.map(e=>'ses:'+e.sid));
@@ -2610,7 +2617,10 @@ const fmtWhen=t=>{const d=new Date(t),now=new Date(),hm=d.toLocaleTimeString('de
 let recentN=0;async function renderRecent(){const box=$('#recent');if(!box)return;const my=++recentN;await migrateSessions();const L=(await sesList()).filter(e=>e.n);if(my!==recentN)return;
   if(S.tracks.length||!L.length){box.style.display='none';return}const rl=$('.rl',box);rl.innerHTML='';
   for(const e of L){const it=el('div','ri');it.innerHTML=`<span class="ic">${I.wave}</span><span class="nm"></span><span class="mt"></span><span class="x" title="Aus dem Verlauf löschen">${I.x}</span>`;
-    $('.nm',it).textContent=e.name;$('.mt',it).textContent=[fmtWhen(e.saved),`${e.n} ${e.n===1?'Spur':'Spuren'}`,fmtShort(e.dur),e.bytes?fmtMB(e.bytes):''].filter(Boolean).join(' · ');
+    /* Projektname zeigen (ältere Einträge: aus der gespeicherten Sitzung nachlesen); Spurnamen klein dahinter */
+    if(e.pn===undefined){try{const d=await idb.get('ses:'+e.sid);if(d){e.pn=d.projName||'';e.tn=(d.tracks||[]).slice(0,3).map(t=>t.name)}}catch{}if(my!==recentN)return}
+    const nm=$('.nm',it),t1=el('span','t1');t1.textContent=e.pn||'Unbenannt';nm.append(t1);if(!e.pn)nm.classList.add('un');if(e.tn&&e.tn.length){const sp=el('span','tn');sp.textContent=e.tn.join(', ')+(e.n>e.tn.length?' …':'');nm.append(sp)}
+    $('.mt',it).textContent=[fmtWhen(e.saved),`${e.n} ${e.n===1?'Spur':'Spuren'}`,fmtShort(e.dur),e.bytes?fmtMB(e.bytes):''].filter(Boolean).join(' · ');
     it.title='Klick: Sitzung wiederherstellen';it.onclick=ev=>ev.target.closest('.x')?delSession(e):restoreSession(e.sid);rl.append(it)}
   const tot=L.reduce((a,e)=>a+(e.bytes||0),0);$('.foot',box).textContent=`Automatisch im Browser gesichert · die letzten ${SES_MAX} Sitzungen bleiben erhalten${tot?' · belegt ca. '+fmtMB(tot):''}`;box.style.display=''}
 const checkRestore=renderRecent;
@@ -2696,7 +2706,7 @@ tracksEl.addEventListener('pointerdown',e=>{
     tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);return}
   if(e.button!==0)return;e.preventDefault();tracksEl.setPointerCapture(e.pointerId);
   if(e.altKey){if(!editable())return;const movers=t.sel?S.tracks.filter(x=>x.sel):[t],orig=movers.map(x=>x.off),minO=Math.min(...orig);let pushed=false;document.body.classList.add('panning');
-    const mv=ev=>{const dt=Math.max(-minO,(ev.clientX-sx)/S.view.pps);if(!pushed&&Math.abs(ev.clientX-sx)>2){pushUndo('Verschieben');pushed=true;stopAll()}if(!pushed)return;movers.forEach((x,i)=>x.off=orig[i]+dt);invalidate()};
+    const mv=ev=>{const dt=Math.max(-minO,(ev.clientX-sx)/S.view.pps);if(!pushed&&Math.abs(ev.clientX-sx)>2){pushUndo('Verschieben');pushed=true;editStop()}if(!pushed)return;movers.forEach((x,i)=>x.off=orig[i]+dt);invalidate()};
     const up=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);document.body.classList.remove('panning');if(pushed)changed()};
     tracksEl.addEventListener('pointermove',mv);tracksEl.addEventListener('pointerup',up);return}
   const tm=T(e),ti=S.tracks.indexOf(t),ctrl=e.ctrlKey||e.metaKey;let anchor=tm,mode='new';
@@ -2725,7 +2735,7 @@ function startCutDrag(t,c,left,sx){const abs0=t.off+c;let moved=false;
   const group=(S.sync?S.tracks.filter(x=>!x.lock||x===t):[t]).map(x=>[x,(x.cuts||[]).findIndex(v=>Math.abs(x.off+v-abs0)<.002)]).filter(g=>g[1]>=0);
   const lo=Math.max(...group.map(([x,i])=>x.off+(i>0?x.cuts[i-1]:0)+.02)),hi=Math.min(...group.map(([x,i])=>x.off+(i<x.cuts.length-1?x.cuts[i+1]:tLen(x)/SR)-.02));
   const selA=hasSel()&&Math.abs(S.sel.a-abs0)<2e-3,selB=hasSel()&&Math.abs(S.sel.b-abs0)<2e-3;document.body.classList.add('cutdrag');
-  const mv=ev=>{if(!moved&&Math.abs(ev.clientX-sx)<3)return;if(!moved){moved=true;stopAll();pushUndo('Schnitt verschieben');for(const[x]of group)x.cuts=x.cuts.slice()}
+  const mv=ev=>{if(!moved&&Math.abs(ev.clientX-sx)<3)return;if(!moved){moved=true;editStop();pushUndo('Schnitt verschieben');for(const[x]of group)x.cuts=x.cuts.slice()}
     let na=clamp(xToTime(ev.clientX-left),lo,hi);const sv=ev.shiftKey?null:xSnap(na,group.map(g=>g[0]));if(sv!=null&&sv>=lo&&sv<=hi)na=sv;showSnap(sv!=null&&na===sv?sv:null);
     for(const[x,i]of group)x.cuts[i]=na-x.off;if(selA)S.sel.a=na;if(selB)S.sel.b=na;setStatus('Schnitt bei '+fmtT(na)+(sv!=null&&na===sv?' · eingerastet am Schnitt einer anderen Spur':'')+' · Shift: ohne Magnet');invalidate();updUI()};
   const up=()=>{tracksEl.removeEventListener('pointermove',mv);tracksEl.removeEventListener('pointerup',up);tracksEl.removeEventListener('pointercancel',up);document.body.classList.remove('cutdrag');setStatus('Bereit');showSnap(null);

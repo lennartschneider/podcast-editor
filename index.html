@@ -55,12 +55,12 @@
 .tlc{width:100%;height:100%;display:block;min-width:0;cursor:crosshair}
 #ted{position:absolute;z-index:20;width:320px;background:#18181a;border:1px solid #2a2a2e;border-radius:14px;padding:8px;box-shadow:0 12px 32px #000a;display:none}
 #ted .tl{font-size:11px;color:#8b8b93;margin:0 4px 6px;display:flex;gap:6px;align-items:center}
-#ted .tl i{width:6px;height:6px;border-radius:2px}
+#ted .tl i{width:6px;height:6px;border-radius:2px}#ted .tl .tx{margin-left:auto;background:none;border:0;min-width:0;width:22px;height:22px;padding:0;border-radius:50%;color:#8b8b93;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center}#ted .tl .tx:hover{background:#26262a;color:#e7e7ea}
 #ted textarea{width:100%;font:13px/1.4 Inter,system-ui,sans-serif;color:#e7e7ea;background:#1f1f22;border:0;border-radius:9px;padding:7px 9px;resize:none;outline:none}
 #ted .hint{margin:5px 4px 0;font-size:10.5px}
 #ted .emo{display:flex;flex-wrap:wrap;gap:2px;margin:0 0 6px}
 #ted .emo button{font-size:17px;line-height:1;padding:5px 6px;border-radius:8px;background:transparent;border:0;min-width:32px;font-family:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif}
-#ted .emo button:hover{background:#242428}
+#ted .emo button:hover{background:#242428}#ted .emo button.on{background:#1c2a3f;box-shadow:inset 0 0 0 1px #8ab4ff66}
 #ted .emo .ed{font-size:15px;color:#8b8b93;margin-left:auto;font-family:inherit;min-width:28px}
 #cap{position:absolute;bottom:18px;left:calc(var(--hw) + (100% - var(--hw))/2);transform:translateX(-50%);max-width:min(640px,60%);background:#000000b8;backdrop-filter:blur(6px);color:#fff;font:600 14px/1.35 Inter,system-ui,sans-serif;padding:6px 14px;border-radius:10px;text-align:center;pointer-events:none;z-index:6;opacity:0;transition:opacity .15s;white-space:pre-line}
 #cap.on{opacity:1}
@@ -354,7 +354,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
       <div id="cap"></div>
       <div id="tsearch"><span data-i="search"></span><input type="text" placeholder="Suchen …" spellcheck="false"><span class="cnt"></span><button class="pv" title="Vorheriger Treffer (Shift+Enter)">‹</button><button class="nx" title="Nächster Treffer (Enter)">›</button><button class="cl" title="Suche schließen (Esc)"></button></div>
       <div id="mvIns"><span></span></div><div id="mvBox"></div><div id="snapLn"></div>
-      <div id="ted"><div class="tl"><i></i><span></span></div><div class="emo"></div><textarea rows="2"></textarea><div class="hint">Enter speichern · Shift+Enter neue Zeile · Esc abbrechen</div></div>
+      <div id="ted"><div class="tl"><i></i><span></span><button class="tx" title="Schließen (Änderungen bleiben) · Esc verwirft">×</button></div><div class="emo"></div><textarea rows="2"></textarea><div class="hint">Enter speichern · Shift+Enter neue Zeile · Esc abbrechen</div></div>
     </div>
     <div id="sideRz"></div><aside id="side">
       <div class="sec"><h4>Auswahl</h4><div class="selg" id="selInfo"></div></div>
@@ -1681,7 +1681,11 @@ function renderEmo(){const b=$('#ted .emo');b.innerHTML='';
   EMO.forEach((x,i)=>{const k=el('button','',esc(x));k.dataset.tip=`Kommentar als <b>${esc(x)}</b> markieren und speichern<span class="def">${i<9?'Alt+'+(i+1)+' · ':''}Shift+Klick: nur einfügen und weiterschreiben</span>`;
     k.addEventListener('pointerdown',e=>e.preventDefault());k.onclick=e=>emoPick(x,e.shiftKey);b.append(k)});
   const ed=el('button','ed','⋯');ed.dataset.tip='Schnellauswahl anpassen: eigene Emojis festlegen';ed.addEventListener('pointerdown',e=>e.preventDefault());ed.onclick=()=>{closeEditor(true);editEmo()};b.append(ed)}
-function emoPick(x,keep){const ta=tedTA();let v=ta.value.trim();for(const e of EMO)if(v.startsWith(e)){v=v.slice(e.length).trim();break}/* vorhandenes Schnell-Emoji ersetzen */
+/* Textfeld wächst mit dem Text (bis zu einer Höhe, dann Scrollen) */
+function tedFit(){const ta=tedTA();if(!ta)return;ta.style.height='auto';ta.style.height=Math.min(260,ta.scrollHeight+2)+'px'}
+function emoPick(x,keep){if(ED&&ED.key==='subs'){const it=S.subs.find(q=>q.id===ED.id);closeEditor(true);if(!it)return;const ex=trNoteFor(it,x);
+    if(ex){delText('notes',ex.id);toast(`${x}-Markierung entfernt`,1800)}else{if(!S.lanesOn.notes){S.lanesOn.notes=true;lsSet('lanes',S.lanesOn);renderLanes()}addText('notes',it.a,it.b,x,false);toast(`Untertitel als ${x} markiert`,1800)}return}
+  const ta=tedTA();let v=ta.value.trim();for(const e of EMO)if(v.startsWith(e)){v=v.slice(e.length).trim();break}/* vorhandenes Schnell-Emoji ersetzen */
   ta.value=x+(v?' '+v:'');if(keep){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}else closeEditor(true)}
 function editEmo(){modal(`<h3>Emoji-Schnellauswahl</h3><div class="hint" style="font-size:13px;margin-bottom:10px">Emojis mit Leerzeichen trennen, höchstens 12. Die ersten neun gehen auch mit Alt+1 … Alt+9.</div>
   <input id="emoIn" style="width:100%;font-size:18px" value="${esc(EMO.join(' '))}"><div class="btns"><button id="emoD">Standard</button><button id="emoN">Abbrechen</button><button class="primary" id="emoY">Speichern</button></div>`);
@@ -1691,8 +1695,12 @@ function editEmo(){modal(`<h3>Emoji-Schnellauswahl</h3><div class="hint" style="
 let ED=null;const tedTA=()=>$('#ted textarea');
 function startEdit(key,it,isNew){closeEditor(true);const l=TLM[key];if(!S.lanesOn[key])toggleLane(key,true);const r=LANES.get(key);if(!r)return;if(!P.on&&!R.on)ensureVisible(it.a);
   const ed=$('#ted'),ta=tedTA();$('.tl i',ed).style.background=l.col;$('.tl span',ed).textContent=`${l.one} · ${fmtT(it.a)}${l.point?'':' – '+fmtT(it.b)}`;
-  $('.emo',ed).style.display=key==='notes'?'flex':'none';ta.value=it.text||'';ta.rows=l.point?1:2;$('.hint',ed).textContent=l.point?'Enter speichern · Esc abbrechen':'Enter speichern · Shift+Enter neue Zeile · Esc abbrechen';
-  ed.style.display='block';ed.style.top=(r.row.offsetTop+r.row.offsetHeight+4)+'px';ed.style.left=(HW+clamp(timeToX(it.a),0,Math.max(0,waveW()-330)))+'px';
+  $('.emo',ed).style.display=key==='notes'||key==='subs'?'flex':'none';ta.value=it.text||'';ta.rows=l.point?1:2;
+  $('.hint',ed).textContent=l.point?'Enter speichern · Esc abbrechen':'Enter speichern · Shift+Enter neue Zeile · Esc abbrechen'+(key==='subs'?' · Emoji: Untertitel markieren':'');
+  /* Untertitel: Emojis markieren den Untertitel (Kommentar über seine Länge); gesetzte sind hervorgehoben */
+  for(const b of $$('.emo button:not(.ed)',ed)){const x=b.textContent,on=key==='subs'&&!!trNoteFor(it,x);b.classList.toggle('on',on);if(!b.dataset.tipN)b.dataset.tipN=b.dataset.tip||'';b.dataset.tip=key==='subs'?(on?`<b>${esc(x)}</b>-Markierung entfernen`:`Untertitel als <b>${esc(x)}</b> markieren`):b.dataset.tipN}
+  const W=!l.point&&(it.text||'').length>70?440:320;ed.style.width=W+'px';
+  ed.style.display='block';ed.style.top=(r.row.offsetTop+r.row.offsetHeight+4)+'px';ed.style.left=(HW+clamp(timeToX(it.a),0,Math.max(0,waveW()-W-10)))+'px';tedFit();
   ED={key,id:it.id,isNew:!!isNew,orig:it.text||''};S.tsel={key,id:it.id};invalidate();setTimeout(()=>{ta.focus();ta.select()},0)}
 function closeEditor(save){if(!ED)return;const e=ED,l=TLM[e.key];ED=null;$('#ted').style.display='none';const ta=tedTA(),v=ta.value.trim();ta.blur();const it=S[e.key].find(x=>x.id===e.id);if(!it)return;
   const dropNew=e.isNew&&!l.point&&(!save||!v);
@@ -2884,7 +2892,9 @@ $('#bkDirB').onclick=async()=>{if(bkNeed){if(await bkPerm(true)){bkNeed=false;up
   inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();stepSearch(e.shiftKey?-1:1)}else if(e.key==='Escape'){e.preventDefault();closeSearch()}});
   $('.nx',box).onclick=()=>stepSearch(1);$('.pv',box).onclick=()=>stepSearch(-1);$('.cl',box).onclick=closeSearch})();
 $('#mCopy').onclick=copyChapters;$('#tImport').onclick=openTextImport;$('#tExport').onclick=()=>openTextExport();
-tedTA().addEventListener('keydown',e=>{e.stopPropagation();const dn=/^Digit([1-9])$/.exec(e.code);if(e.altKey&&dn&&ED&&ED.key==='notes'&&EMO[dn[1]-1]){e.preventDefault();emoPick(EMO[dn[1]-1],e.shiftKey)}else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();closeEditor(true)}else if(e.key==='Escape'){e.preventDefault();closeEditor(false)}});
+tedTA().addEventListener('input',tedFit);$('#ted .tx').onclick=()=>closeEditor(true);
+/* Klick irgendwo außerhalb: sofort schließen (Änderungen bleiben) – auch dort, wo Klicks den Fokus nicht wegnehmen (Spuren, Zeitleiste) */
+document.addEventListener('pointerdown',e=>{if(ED&&!e.target.closest('#ted')&&!e.target.closest('#ctx'))closeEditor(true)},true);tedTA().addEventListener('keydown',e=>{e.stopPropagation();const dn=/^Digit([1-9])$/.exec(e.code);if(e.altKey&&dn&&ED&&(ED.key==='notes'||ED.key==='subs')&&EMO[dn[1]-1]){e.preventDefault();emoPick(EMO[dn[1]-1],e.shiftKey)}else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();closeEditor(true)}else if(e.key==='Escape'){e.preventDefault();closeEditor(false)}});
 tedTA().addEventListener('blur',()=>setTimeout(()=>{if(ED&&document.activeElement!==tedTA())closeEditor(true)},120));
 /* Handy / sehr kleiner Bildschirm: einmal pro Besuch warnen (wegklickbar) */
 (()=>{const small=Math.min(screen.width||innerWidth,screen.height||innerHeight)<700,/* Gerät (nicht Fenster): Handy = kurze Bildschirmseite unter 700 px */touch=matchMedia('(pointer:coarse)').matches&&!matchMedia('(any-pointer:fine)').matches;let seen=false;try{seen=sessionStorage.getItem('pe-mobile-ok')==='1'}catch(e){}

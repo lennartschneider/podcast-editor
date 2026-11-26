@@ -2511,7 +2511,10 @@ const fmtMB=b=>b>=1e9?nf(b/1e9,1)+' GB':Math.max(1,Math.round(b/1e6))+' MB';
 async function updStore(){const el2=$('#storeInfo');if(!el2)return;let used=null;try{const e=await navigator.storage.estimate();used=e.usage}catch{}
   el2.innerHTML=`Browser-Zwischenspeicher: <b>${used!=null?fmtMB(used):'?'}</b> (die letzten bis zu 10 Sitzungen, im Profilordner von Chrome/Edge)`}
 async function clearStore(){if(!await confirmBox('Browser-Zwischenspeicher leeren?','Alle automatisch gespeicherten Sitzungen (auch die Liste „Letzte Sitzungen“) werden aus dem Browser gelöscht. Deine geöffneten Spuren, gespeicherten .aeproj-Dateien und Backups bleiben erhalten.','Leeren'))return;
-  const ks=await idb.keys();await idb.delMany(ks.filter(k=>k==='session'||k==='meta'||k==='sessions'||String(k).startsWith('ses:')||String(k).startsWith('a:')));S.sid=null;for(const t of S.tracks)for(const s of t.ch)for(const blk of s.b)AID.delete(blk);updStore();toast('Zwischenspeicher geleert – wird beim nächsten Bearbeiten neu angelegt')}let bkDir=null,bkLast=0,bkT=null,bkNeed=false;
+  const ks=await idb.keys();await idb.delMany(ks.filter(k=>k==='session'||k==='meta'||k==='sessions'||String(k).startsWith('ses:')||String(k).startsWith('a:')));S.sid=null;for(const t of S.tracks)for(const s of t.ch)for(const blk of s.b)AID.delete(blk);updStore();toast('Zwischenspeicher geleert – wird beim nächsten Bearbeiten neu angelegt')}let bkDir=null,bkLast=lsGet('bkLast',0),bkT=null,bkNeed=false;
+/* „vor 3 Min.“ – wie lange die letzte Sicherung her ist */
+function bkAgo(){if(!bkLast)return null;const m=Math.floor((Date.now()-bkLast)/60000);return m<1?'gerade eben':m<60?`vor ${m} Min.`:m<60*24?`vor ${Math.floor(m/60)} Std.${m%60?' '+(m%60)+' Min.':''}`:'vor '+Math.floor(m/1440)+(m<2880?' Tag':' Tagen')}
+setInterval(()=>{try{updBk()}catch{}},30000);/* Anzeige frisch halten */
 const saveBk=()=>lsSet('backup',{on:BK.on,min:BK.min,keep:BK.keep,v2:1});
 const fmtStamp=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}-${String(d.getMinutes()).padStart(2,'0')}-${String(d.getSeconds()).padStart(2,'0')}`;
 async function bkInit(){if(!window.showDirectoryPicker){$('#bkInfo').textContent='Automatische Sicherung braucht Chrome oder Edge.';$$('#secBk input,#secBk select,#secBk button').forEach(x=>x.disabled=true);return}
@@ -2522,24 +2525,24 @@ function bkSchedule(){clearInterval(bkT);if(BK.on)bkT=setInterval(()=>runBackup(
 async function runBackup(manual){if(!S.tracks.length){if(manual)toast('Nichts zu sichern');return}if(!manual&&(!S.dirtyBk||R.on||S.busy))return;if(!bkDir)return manual?bkPick():undefined;
   if(!await bkPerm(manual)){bkNeed=true;updBk();return}bkNeed=false;
   $('#bAuto').classList.add('run');
-  try{const base=safeName(S.projName||'Unbenannt')+' Backup ',nm=base+fmtStamp(new Date())+'.aeproj',fh=await bkDir.getFileHandle(nm,{create:true}),w=await fh.createWritable();await writeProject(x=>w.write(x));await w.close();S.dirtyBk=false;bkLast=Date.now();
+  try{const base=safeName(S.projName||'Unbenannt')+' Backup ',nm=base+fmtStamp(new Date())+'.aeproj',fh=await bkDir.getFileHandle(nm,{create:true}),w=await fh.createWritable();await writeProject(x=>w.write(x));await w.close();S.dirtyBk=false;bkLast=Date.now();lsSet('bkLast',bkLast);
     if(BK.keep>0){const list=[];for await(const[n,h]of bkDir.entries())if(h.kind==='file'&&n.startsWith(base)&&n.endsWith('.aeproj'))list.push(n);list.sort();while(list.length>BK.keep)await bkDir.removeEntry(list.shift())}
     updBk();if(manual)toast('Backup gespeichert: '+nm,3500)}catch(e){console.warn(e);setStatus('Backup fehlgeschlagen: '+e.message)}finally{setTimeout(()=>$('#bAuto').classList.remove('run'),600)}}
 function updBkIcon(){const a=$('#bAuto');if(!a)return;const tm=bkLast?new Date(bkLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
   a.classList.toggle('on',BK.on&&!!bkDir&&!bkNeed);a.classList.toggle('warn',BK.on&&bkNeed&&!!bkDir&&!!window.showDirectoryPicker);a.classList.toggle('nodir',!bkDir&&!!window.showDirectoryPicker);/* rot: noch kein Sicherungsordner */
   a.title=!window.showDirectoryPicker?'Automatische Sicherung: braucht Chrome oder Edge':!bkDir?(BK.on?'Automatische Sicherung ist an, aber es fehlt noch ein Ordner – Klick: Ordner wählen':'Automatische Sicherung aus – Klick: Ordner wählen und einschalten'):bkNeed?'Sicherung pausiert – Klick: Zugriff auf „'+bkDir.name+'“ erlauben':
-    BK.on?`Automatische Sicherung aktiv: alle ${BK.min} Min. nach „${bkDir.name}“${tm?' · letzte '+tm+' Uhr':''}\nKlick: ausschalten`:`Automatische Sicherung aus (Ordner „${bkDir.name}“)\nKlick: einschalten`}
+    BK.on?`Automatische Sicherung aktiv: alle ${BK.min} Min. nach „${bkDir.name}“${tm?' · letzte '+bkAgo()+' ('+tm+' Uhr)':''}\nKlick: ausschalten`:`Automatische Sicherung aus (Ordner „${bkDir.name}“)\nKlick: einschalten`}
 async function toggleAutoBk(){if(!window.showDirectoryPicker)return toast('Automatische Sicherung braucht Chrome oder Edge');
   if(!bkDir)return bkPick();if(bkNeed){if(await bkPerm(true)){bkNeed=false;BK.on=true;saveBk();bkSchedule();updBk();runBackup(false);toast('Sicherung läuft wieder')}return}
   BK.on=!BK.on;$('#bkOn').checked=BK.on;saveBk();bkSchedule();updBk();toast(BK.on?`Automatische Sicherung an – alle ${BK.min} Min. nach „${bkDir.name}“`:'Automatische Sicherung aus');if(BK.on){S.dirtyBk=true;runBackup(false)}}
 /* Zustand der Sicherung in der Überschrift (sichtbar, wenn der Abschnitt eingeklappt ist) */
-function updBkSt(){const e=$('#secBk .bkst');if(!e)return;const no=!window.showDirectoryPicker,[c,t]=no?['off','in diesem Browser nicht verfügbar']:!BK.on?['bad','aus']:!bkDir?['bad','kein Ordner gewählt']:bkNeed?['warn','Zugriff erlauben']:['ok',`aktiv · alle ${BK.min} min`];
+function updBkSt(){const e=$('#secBk .bkst');if(!e)return;const no=!window.showDirectoryPicker,[c,t]=no?['off','in diesem Browser nicht verfügbar']:!BK.on?['bad','aus']:!bkDir?['bad','kein Ordner gewählt']:bkNeed?['warn','Zugriff erlauben']:['ok',bkLast?`aktiv · zuletzt ${bkAgo()}`:`aktiv · alle ${BK.min} Min.`];
   e.className='r bkst '+c;e.innerHTML=`<i></i>${t}`}
 function updBk(){updBkIcon();updBkSt();const b=$('#bkDirB');if(!b)return;b.textContent=bkNeed?'Zugriff erlauben':bkDir?'📁 '+bkDir.name:'Ordner wählen …';b.classList.toggle('on',bkNeed);
   const tm=bkLast?new Date(bkLast).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
   const pb=projBytes(),est=pb?`<br>Je Sicherung ca. <b>${fmtMB(pb)}</b> · belegt höchstens ca. <b>${BK.keep?fmtMB(pb*BK.keep):'unbegrenzt'}</b>${!BK.keep?' <span class="warn">(„alle behalten“ kann die Festplatte füllen)</span>':''}`:'';
   $('#bkInfo').innerHTML=(!bkDir?'Wähle einen Ordner – dort landen die Sicherungen als .aeproj-Dateien.':bkNeed?'<span style="color:#f5b942">Sicherung pausiert: Der Browser braucht nach dem Neustart einmal deine Erlaubnis – „Zugriff erlauben“ klicken.</span>':
-    (BK.on?`Sichert alle ${BK.min} Min. (nur bei Änderungen)`:'Automatische Sicherung aus')+(tm?` · letzte Sicherung ${tm} Uhr`:''))+est}
+    (BK.on?`Sichert alle ${BK.min} Min. (nur bei Änderungen)`:'Automatische Sicherung aus')+(tm?`<br>Letzte Sicherung: <b>${bkAgo()}</b> (${tm} Uhr)`:''))+est}
 
 /* ============================== Sitzung (Autospeichern) ============================== */
 const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('audioeditor',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));

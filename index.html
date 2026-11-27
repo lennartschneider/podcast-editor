@@ -399,7 +399,7 @@ body.cutdrag,body.cutdrag *{cursor:col-resize!important}
   </div>
   <div id="foot"><span id="status">Bereit</span><span class="bar" id="prog"><b></b></span><span class="sp"></span><span id="selfoot"></span><span id="hints"><kbd>Strg</kbd>+Rad Zoom · <kbd>Shift</kbd>+Rad Scrollen · <kbd>Alt</kbd>+Ziehen verschieben · Rad-Klick Play/Pause · <kbd>?</kbd> Kürzel</span></div>
 </div>
-<input type="file" id="file" multiple accept="audio/*,video/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.webm,.mp4,.aeproj,.aup3,.srt,.vtt,.txt,.json" style="display:none">
+<input type="file" id="file" multiple accept="audio/*,video/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus,.webm,.mp4,.aeproj,.aup3,.aup3-wal,.srt,.vtt,.txt,.json" style="display:none">
 <div id="modal"></div>
 <div id="ctx"></div>
 <div id="toast"></div>
@@ -2350,7 +2350,8 @@ $('#logClr').dataset.tip='Löscht das Protokoll dieser Spur (das Audio bleibt un
 
 /* ============================== Import ============================== */
 async function importFiles(files){files=[...files].filter(f=>f&&f.size);const rz=files.find(f=>/\.aerezept$/i.test(f.name));if(rz)return openRecipeFile(rz);const pj=files.find(f=>/\.aeproj$/i.test(f.name));if(pj)return openProject(pj,null);
-  const au=files.find(f=>/\.aup3$/i.test(f.name));if(au)return importAup3(au);if(files.some(f=>/\.aup$/i.test(f.name)))return toast('Alte Audacity-Projekte (.aup, bis Version 2.4) bitte in Audacity 3 öffnen und als .aup3 speichern – dann hier importieren.',7000);
+  const au=files.find(f=>/\.aup3$/i.test(f.name));if(au)return importAup3(au,files.find(f=>f.name.toLowerCase()===au.name.toLowerCase()+'-wal'));
+  if(files.some(f=>/\.aup3-wal$/i.test(f.name)))return toast('Die .aup3-wal-Datei gehört zu einem Audacity-Projekt – bitte zusammen mit der passenden .aup3-Datei auswählen.',6000);if(files.some(f=>/\.aup$/i.test(f.name)))return toast('Alte Audacity-Projekte (.aup, bis Version 2.4) bitte in Audacity 3 öffnen und als .aup3 speichern – dann hier importieren.',7000);
   const txt=files.filter(f=>/\.(srt|vtt|txt|json)$/i.test(f.name));for(const f of txt)await importTextFile(f);files=files.filter(f=>!txt.includes(f));if(!files.length)return;
   if(!editable())return;const wasEmpty=!S.tracks.some(t=>tLen(t));let ok=0,pushed=false;setBusy(true,'Importiere …');
   try{for(let i=0;i<files.length;i++){const f=files[i];setStatus(`Importiere ${f.name} (${i+1}/${files.length}) …`);progress(i/files.length);
@@ -2361,9 +2362,47 @@ async function importFiles(files){files=[...files].filter(f=>f&&f.size);const rz
   if(ok){S.tracks.forEach(t=>t.sel=false);S.tracks[S.tracks.length-1].sel=true;S.focus=S.tracks[S.tracks.length-1].id;changed(true);if(wasEmpty)fit();toast(ok+' '+(ok===1?'Datei':'Dateien')+' importiert')}}
 
 /* ============================== Audacity-Projekte (.aup3) ==============================
-   .aup3 = SQLite-Datenbank: Tabelle project/autosave (dict+doc = binär kodiertes XML), Tabelle sampleblocks (Audio-Blöcke). */
-let sqlP;const SQLJS='https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/';
-const loadSql=()=>sqlP||(sqlP=new Promise((res,rej)=>{const s=document.createElement('script');s.src=SQLJS+'sql-wasm.js';s.onload=()=>initSqlJs({locateFile:f=>SQLJS+f}).then(res,e=>{sqlP=null;rej(e)});s.onerror=()=>{sqlP=null;rej(new Error('SQLite-Modul konnte nicht geladen werden (Internetverbindung nötig)'))};document.head.append(s)}));
+   .aup3 = SQLite-Datenbank: Tabelle project/autosave (dict+doc = binär kodiertes XML), Tabelle sampleblocks (Audio-Blöcke).
+   Gelesen wird mit einem eigenen, rein lesenden SQLite-Leser (kein Laden der ganzen Datei, keine Internetverbindung nötig). */
+/* SQLite-Projektdatei stückweise lesen (nur lesen) – Audacity-Projekte sind oft größer als 2 GB und passen nicht am Stück in den Speicher.
+   Seiten werden in 8-MB-Fenstern nachgeladen. Optional die WAL-Datei (.aup3-wal: Änderungen, die Audacity noch nicht in die Hauptdatei übernommen hat). */
+async function sqliteOpen(file,wal){
+  const rd=async(f,a,b)=>new Uint8Array(await f.slice(a,b).arrayBuffer());
+  const hb=await rd(file,0,100);if(String.fromCharCode(...hb.subarray(0,15))!=='SQLite format 3')throw new Error('Keine gültige Audacity-Projektdatei (.aup3)');
+  let ps=(hb[16]<<8)|hb[17];if(ps===1)ps=65536;const U=ps-hb[20],u32=(b,p)=>((b[p]<<24)|(b[p+1]<<16)|(b[p+2]<<8)|b[p+3])>>>0,u16=(b,p)=>(b[p]<<8)|b[p+1];
+  /* WAL: jüngste Fassung jeder Seite aus abgeschlossenen Transaktionen (Salz muss zum WAL-Kopf passen) */
+  const walMap=new Map();let walUsed=0;
+  if(wal&&wal.size>=32){const wh=await rd(wal,0,32);const mg=u32(wh,0);if((mg&0xfffffffe)===0x377f0682&&u32(wh,8)===ps){const s1=u32(wh,16),s2=u32(wh,20),fs=24+ps,n=Math.floor((wal.size-32)/fs);let pend=new Map();
+      const per=Math.max(1,Math.floor((8<<20)/fs));let ok=true;
+      for(let i=0;i<n&&ok;i+=per){const cnt=Math.min(per,n-i),buf=await rd(wal,32+i*fs,32+(i+cnt)*fs);
+        for(let j=0;j<cnt;j++){const o=j*fs;if(u32(buf,o+8)!==s1||u32(buf,o+12)!==s2){ok=false;break}pend.set(u32(buf,o),32+(i+j)*fs+24);if(u32(buf,o+4)>0){for(const[k,v]of pend)walMap.set(k,v);walUsed=i+j+1;pend=new Map()}}}}}
+  const W=8<<20,cache=new Map();
+  const win=async k=>{let b=cache.get(k);if(b){cache.delete(k);cache.set(k,b);return b}b=await rd(file,k*W,Math.min(file.size,(k+1)*W));cache.set(k,b);if(cache.size>8)cache.delete(cache.keys().next().value);return b};
+  const page=async n=>{const w=walMap.get(n);if(w!=null)return rd(wal,w,w+ps);const off=(n-1)*ps,k=Math.floor(off/W),b=await win(k),o=off-k*W;if(o+ps>b.length)throw new Error('Projektdatei ist unvollständig (Seite '+n+' fehlt)');return b.subarray(o,o+ps)};
+  const vint=(b,p)=>{let v=0;for(let i=0;i<8;i++){const c=b[p+i];v=v*128+(c&127);if(c<128)return[v,p+i+1]}return[v*256+b[p+8],p+9]};
+  const payload=async(pg,p,P)=>{const X=U-35;if(P<=X)return pg.slice(p,p+P);const M=Math.floor((U-12)*32/255)-23,K=M+((P-M)%(U-4)),loc=K<=X?K:M;
+    const out=new Uint8Array(P);out.set(pg.subarray(p,p+loc));let o=loc,nx=u32(pg,p+loc);
+    while(o<P){if(!nx)throw new Error('Projektdatei beschädigt (Überlaufkette bricht ab)');const op=await page(nx),take=Math.min(P-o,U-4);out.set(op.subarray(4,4+take),o);o+=take;nx=u32(op,0)}return out};
+  const record=b=>{const[h,p0]=vint(b,0);const ts=[];let q=p0;while(q<h){const[t,nq]=vint(b,q);ts.push(t);q=nq}let o=h;const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);
+    return ts.map(t=>{let v=null;if(t>=1&&t<=6){const n=[0,1,2,3,4,6,8][t];v=0;for(let i=0;i<n;i++)v=v*256+b[o+i];if(b[o]&128)v-=2**(8*n);o+=n}else if(t===7){v=dv.getFloat64(o);o+=8}else if(t===8)v=0;else if(t===9)v=1;
+      else if(t>=12){const n=(t-(t%2?13:12))/2,s=b.subarray(o,o+n);v=t%2?new TextDecoder().decode(s):s;o+=n}return v})};
+  const hdr=n=>n===1?100:0,cell=(pg,h,i,leaf)=>u16(pg,h+(leaf?8:12)+2*i);
+  async function* scan(root){const st=[root];while(st.length){const n=st.pop(),pg=await page(n),h=hdr(n),ty=pg[h],nc=u16(pg,h+3);
+      if(ty===13){for(let i=0;i<nc;i++){const[P,p]=vint(pg,cell(pg,h,i,true)),[rid,p2]=vint(pg,p);yield[rid,await payload(pg,p2,P)]}}
+      else if(ty===5){const kids=[];for(let i=0;i<nc;i++)kids.push(u32(pg,cell(pg,h,i,false)));kids.push(u32(pg,h+8));for(let i=kids.length-1;i>=0;i--)st.push(kids[i])}
+      else throw new Error('Projektdatei beschädigt (Seitentyp '+ty+')')}}
+  async function getRow(root,rid){let n=root;for(let d=0;d<40;d++){const pg=await page(n),h=hdr(n),ty=pg[h],nc=u16(pg,h+3);
+      if(ty===5){let lo=0,hi=nc;while(lo<hi){const m=(lo+hi)>>1,[key]=vint(pg,cell(pg,h,m,false)+4);if(key<rid)lo=m+1;else hi=m}n=lo<nc?u32(pg,cell(pg,h,lo,false)):u32(pg,h+8);continue}
+      if(ty!==13)return null;let lo=0,hi=nc-1;while(lo<=hi){const m=(lo+hi)>>1,[P,p]=vint(pg,cell(pg,h,m,true)),[r,p2]=vint(pg,p);if(r===rid)return payload(pg,p2,P);if(r<rid)lo=m+1;else hi=m-1}return null}return null}
+  /* Tabellen aus dem Schema: Spaltennamen aus CREATE TABLE; INTEGER PRIMARY KEY steht als NULL im Datensatz → rowid einsetzen */
+  const tables={};for await(const[,pl]of scan(1)){const[type,name,,root,sql]=record(pl);if(type!=='table'||!sql)continue;
+    const body=sql.slice(sql.indexOf('(')+1,sql.lastIndexOf(')')),parts=[];let d=0,cur='';for(const ch of body){if(ch==='(')d++;else if(ch===')')d--;if(ch===','&&d===0){parts.push(cur);cur=''}else cur+=ch}parts.push(cur);
+    const cols=[];let pk=-1;for(const x of parts){const w=x.trim().split(/\s+/),c=(w[0]||'').replace(/["`\[\]]/g,'').toLowerCase();if(!c||['primary','unique','constraint','check','foreign'].includes(c))continue;if(/integer\s+primary\s+key/i.test(x))pk=cols.length;cols.push(c)}
+    tables[name.toLowerCase()]={root,cols,pk}}
+  const obj=(T,rid,pl)=>{const v=record(pl),o={};T.cols.forEach((c,i)=>o[c]=i===T.pk&&v[i]==null?rid:v[i]);return o};
+  return{tables,walUsed,walPages:walMap.size,
+    async get(tab,rid){const T=tables[tab];if(!T)return null;const pl=await getRow(T.root,rid);return pl?obj(T,rid,pl):null},
+    async*rows(tab){const T=tables[tab];if(!T)return;for await(const[rid,pl]of scan(T.root))yield obj(T,rid,pl)}}}
 function decodeAupXml(u8){const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);let p=0,cs=1,names=new Map();const nstack=[],root={name:'#root',attrs:{},kids:[]},st=[root];
   const u16=()=>{const v=dv.getUint16(p,true);p+=2;return v},i32=()=>{const v=dv.getInt32(p,true);p+=4;return v};
   const str=len=>{const b=u8.subarray(p,p+len);p+=len;if(cs===1)return new TextDecoder('utf-8').decode(b);if(cs===2)return new TextDecoder('utf-16le').decode(b);let s='';for(let i=0;i+3<b.length;i+=4)s+=String.fromCodePoint((b[i]|b[i+1]<<8|b[i+2]<<16|b[i+3]<<24)>>>0);return s};
@@ -2387,28 +2426,29 @@ function decodeAupXml(u8){const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteL
     default:break}}
   return root}
 const kidsOf=(el,n)=>el.kids.filter(k=>k.name===n);
-async function importAup3(file){if(!editable())return;if(S.tracks.length&&!await confirmBox('Audacity-Projekt öffnen?',`„${file.name}“ ersetzt die aktuellen Spuren${S.dirty?' – ungespeicherte Änderungen gehen verloren (vorher Strg+S)':''}.`,'Öffnen'))return;
-  setBusy(true,'Lade SQLite-Modul …');await paintPause();let db=null;
-  try{const SQL=await loadSql();setBusyLabel('Lese Audacity-Projekt …');progress(.05);db=new SQL.Database(new Uint8Array(await file.arrayBuffer()));
-    const one=sql=>{try{const r=db.exec(sql);return r.length&&r[0].values.length?r[0].values[0]:null}catch{return null}};
-    const row=one('SELECT dict,doc FROM autosave WHERE id=1')||one('SELECT dict,doc FROM project WHERE id=1');if(!row||!row[0]||!row[1])throw new Error('Keine Projektdaten gefunden – ist die Datei noch in Audacity geöffnet?');
+async function importAup3(file,wal){if(!editable())return;if(S.tracks.length&&!await confirmBox('Audacity-Projekt öffnen?',`„${file.name}“ ersetzt die aktuellen Spuren${S.dirty?' – ungespeicherte Änderungen gehen verloren (vorher Strg+S)':''}.`,'Öffnen'))return;
+  setBusy(true,'Lese Audacity-Projekt …',true);await paintPause();
+  try{progress(.02);const db=await sqliteOpen(file,wal);
+    const pick=async t=>{const r=await db.get(t,1);return r&&r.dict&&r.doc&&r.dict.length&&r.doc.length?[r.dict,r.doc]:null};
+    const row=await pick('autosave')||await pick('project');if(!row)throw new Error('Keine Projektdaten gefunden – ist die Datei noch in Audacity geöffnet?');
     const both=new Uint8Array(row[0].length+row[1].length);both.set(row[0]);both.set(row[1],row[0].length);
     const proj=decodeAupXml(both).kids.find(k=>k.name==='project');if(!proj)throw new Error('Kein <project> im Audacity-Projekt');
-    const prate=+proj.attrs.rate||44100,bq=db.prepare('SELECT sampleformat,samples FROM sampleblocks WHERE blockid=?'),warn=new Set();
-    const readBlock=(id,len)=>{if(id<=0)return new Float32Array(Math.max(-id,len||0));bq.bind([id]);if(!bq.step()){bq.reset();warn.add('fehlende Audioblöcke');return new Float32Array(len||0)}const[fmt,blob]=bq.get();bq.reset();
-      const b=blob.slice().buffer;if(fmt===131073){const s=new Int16Array(b),o=new Float32Array(s.length);for(let i=0;i<s.length;i++)o[i]=s[i]/32768;return o}
+    const prate=+proj.attrs.rate||44100,warn=new Set();
+    const readBlock=async(id,len)=>{if(id<=0)return new Float32Array(Math.max(-id,len||0));const r=await db.get('sampleblocks',id);if(!r||!r.samples){warn.add(wal?'fehlende Audioblöcke':'fehlende Audioblöcke (liegt neben der Datei eine .aup3-wal? Dann beide zusammen importieren)');return new Float32Array(len||0)}
+      const fmt=r.sampleformat,b=r.samples.slice().buffer;if(fmt===131073){const s=new Int16Array(b),o=new Float32Array(s.length);for(let i=0;i<s.length;i++)o[i]=s[i]/32768;return o}
       if(fmt===262145){const s=new Int32Array(b),o=new Float32Array(s.length);for(let i=0;i<s.length;i++)o[i]=s[i]/8388608;return o}return new Float32Array(b)};
     /* Spuren einsammeln: Stereo = zwei aufeinanderfolgende <wavetrack>, das erste mit linked≠0 */
     const els=proj.kids,groups=[],labels=[];
     for(let i=0;i<els.length;i++){const e=els[i];if(e.name==='wavetrack'){if(+e.attrs.linked&&els[i+1]&&els[i+1].name==='wavetrack'){groups.push([e,els[i+1]]);i++}else groups.push([e])}
       else if(e.name==='labeltrack')labels.push(e);else if(['notetrack','timetrack'].includes(e.name))warn.add(e.name==='notetrack'?'MIDI-Spuren':'Zeitspur')}
     const tracks=[];let gi=0;
-    for(const g of groups){setBusyLabel(`Lese Spur ${++gi} von ${groups.length} …`);progress(.1+.8*gi/groups.length);await yieldUI();
+    for(const g of groups){setBusyLabel(`Lese Spur ${++gi} von ${groups.length} …`);progress(.05+.85*(gi-1)/groups.length);await yieldUI();
       const A=g[0].attrs,rate=+A.rate||prate,clipsPerCh=g.map(e=>kidsOf(e,'waveclip')),nClip=clipsPerCh[0].length,clips=[];
       for(let ci=0;ci<nClip;ci++){const chData=[];let meta=null;
         for(let c=0;c<g.length;c++){const wc=clipsPerCh[c][ci];if(!wc){chData.push(null);continue}const seq=kidsOf(wc,'sequence')[0];if(!seq){chData.push(new Float32Array(0));continue}
           const ns=+seq.attrs.numsamples||0,data=new Float32Array(ns),blocks=kidsOf(seq,'waveblock');
-          blocks.forEach((b,bi)=>{const s=+b.attrs.start||0,len=+b.attrs.length||((bi+1<blocks.length?+blocks[bi+1].attrs.start:ns)-s),arr=readBlock(+b.attrs.blockid,len);data.set(arr.subarray(0,Math.max(0,Math.min(arr.length,ns-s))),s)});
+          for(let bi=0;bi<blocks.length;bi++){const b=blocks[bi],s=+b.attrs.start||0,len=+b.attrs.length||((bi+1<blocks.length?+blocks[bi+1].attrs.start:ns)-s),arr=await readBlock(+b.attrs.blockid,len);data.set(arr.subarray(0,Math.max(0,Math.min(arr.length,ns-s))),s);
+            if(bi%16===15){progress(.05+.85*(gi-1+(c+bi/blocks.length)/g.length)/groups.length);await yieldUI()}}
           if(!meta){const a=wc.attrs,tl=+a.trimLeft||0,tr=+a.trimRight||0;if(a.clipStretchRatio&&Math.abs(+a.clipStretchRatio-1)>1e-6)warn.add('Tempo-Dehnung von Clips (wird ignoriert)');
             const env=kidsOf(wc,'envelope')[0],pts=env?kidsOf(env,'controlpoint').map(cp=>({t:+cp.attrs.t,v:+cp.attrs.val})):[];meta={off:+a.offset||0,s0:Math.round(tl*rate),trimR:Math.round(tr*rate),pts}}
           chData.push(data.subarray(Math.min(meta.s0,data.length),Math.max(meta.s0,data.length-meta.trimR)))}
@@ -2424,7 +2464,6 @@ async function importAup3(file){if(!editable())return;if(S.tracks.length&&!await
       if(rate!==SR){setBusyLabel(`Rechne Spur ${gi} auf ${SR} Hz um …`);ch=await resample(ch,rate,SR)}
       const sc=SR/rate;tracks.push({name:A.name||'Audio '+gi,ch,off:t0,vol:A.gain!=null&&+A.gain>0?Math.round(20*Math.log10(+A.gain)*10)/10:0,pan:clamp(+A.pan||0,-1,1),mute:!!+A.mute,solo:!!+A.solo,
         cuts:[...new Set(cuts.map(x=>+x.toFixed(4)))].sort((x,y)=>x-y),env:envPts.map(p=>({t:p.t,db:Math.round(p.db*10)/10})),sc})}
-    bq.free();db.close();db=null;
     if(!tracks.length)throw new Error('Keine Audiospuren im Projekt gefunden');
     stopAll();S.tracks=tracks.map(t=>newTrack({name:t.name,ch:t.ch,off:t.off,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,cuts:t.cuts,env:t.env}));
     S.marks=[];S.notes=[];S.subs=[];let nl=0;
@@ -2433,7 +2472,8 @@ async function importAup3(file){if(!editable())return;if(S.tracks.length&&!await
     S.undo=[];S.redo=[];S.sel={a:0,b:0};S.focus=null;S.tsel=null;S.projHandle=null;S.projName=file.name.replace(/\.aup3$/i,'');S.sid=null;
     setBusy(false);renderLanes();changed(true);fit();S.dirty=true;updTitle();
     toast(`Audacity-Projekt importiert: ${tracks.length} ${tracks.length===1?'Spur':'Spuren'}${nl?`, ${nl} Textmarken`:''}${prate!==SR?` · von ${prate} auf ${SR} Hz umgerechnet`:''}${warn.size?' · nicht übernommen: '+[...warn].join(', '):''}`,7000)}
-  catch(e){console.error(e);setBusy(false);toast('Audacity-Import fehlgeschlagen: '+e.message,6000)}finally{if(db)try{db.close()}catch{}}}
+  catch(e){console.error(e);setBusy(false);if(e.cancelled)return toast('Audacity-Import abgebrochen');
+    toast('Audacity-Import fehlgeschlagen: '+(e.name==='NotReadableError'?'Die Datei konnte nicht gelesen werden – ist sie gerade in Audacity geöffnet oder wurde sie nach der Auswahl verändert? Audacity schließen und noch einmal importieren.':e.message),8000)}}
 
 /* ============================== Export ============================== */
 /* WAV wird stückweise geschrieben: erst der Kopf (Gesamtlänge ist vorab bekannt), dann jeder 30-s-Abschnitt */

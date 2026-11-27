@@ -45,10 +45,11 @@ Empfohlen: **Chrome oder Edge**. Auf dem Mac werden Tastenkürzel automatisch al
 
 ## Verwendete Bibliotheken
 
-Werden bei Bedarf von [cdnjs](https://cdnjs.com/) geladen (nur diese beiden Funktionen brauchen dafür Internet):
+Wird bei Bedarf von [cdnjs](https://cdnjs.com/) geladen (nur diese Funktion braucht dafür Internet):
 
 - [lamejs](https://github.com/zhuker/lamejs) – MP3-Export (LGPL-3.0)
-- [sql.js](https://github.com/sql-js/sql.js) – Import von Audacity-Projekten (MIT)
+
+Audacity-Projekte (`.aup3`, auch größer als 2 GB) liest der Editor mit einem eigenen SQLite-Leser direkt aus der Datei – ohne Zusatzbibliothek.
 
 ## Lizenz
 
